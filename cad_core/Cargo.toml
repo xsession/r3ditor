@@ -1,0 +1,19 @@
+[package]
+name = "cad_core"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[features]
+# STEP support is intentionally optional because OpenCascade builds are heavy.
+# Enable with: `cargo run -p cad_viewer --features step -- <file.step>`
+step = ["dep:occt-rs"]
+
+[dependencies]
+anyhow = "1"
+thiserror = "2"
+log = "0.4"
+parking_lot = "0.12"
+stl_io = "0.7"
+# Optional: OpenCascade wrapper (user must provide system OpenCascade or build toolchain)
+occt-rs = { version = "0.8", optional = true }
