@@ -1,111 +1,128 @@
-use std::{
-    path::PathBuf,
-    time::Instant,
-};
+use std::path::PathBuf;
 
 use anyhow::Result;
 use crossbeam_channel::{unbounded, Receiver, Sender};
 use fyrox::{
+    asset::untyped::ResourceKind,
     core::{
-        algebra::{Matrix4, UnitQuaternion, Vector2, Vector3},
+        algebra::{UnitQuaternion, Vector2, Vector3, Vector4},
         color::Color,
+        math::TriangleDefinition,
         pool::Handle,
+        reflect::prelude::*,
+        visitor::prelude::*,
     },
     engine::executor::Executor,
-    event::{DeviceEvent, ElementState, Event, MouseScrollDelta, WindowEvent},
-    plugin::{Plugin, PluginConstructor, PluginContext},
-    resource::model::Model,
+    event::{ElementState, Event, MouseScrollDelta, WindowEvent},
+    keyboard::Key,
+    material::{Material, MaterialResource},
+    plugin::{Plugin, PluginContext},
     scene::{
         base::BaseBuilder,
         camera::CameraBuilder,
         graph::Graph,
-        light::DirectionalLightBuilder,
-        mesh::{MeshBuilder, surface::SurfaceData, SurfaceBuilder, SurfaceResource},
+        light::{directional::DirectionalLightBuilder, BaseLightBuilder},
+        mesh::{
+            buffer::{TriangleBuffer, VertexBuffer},
+            surface::{SurfaceBuilder, SurfaceData, SurfaceResource},
+            vertex::StaticVertex,
+            MeshBuilder,
+        },
         node::Node,
         transform::TransformBuilder,
     },
-    material::{Material, MaterialResource},
-    resource::{ResourceKind},
 };
-use uuid::Uuid;
 
+use fyrox::graph::BaseSceneGraph;
 use cad_core::import::{ImportJob, ImportResult};
 
 pub fn run() -> Result<()> {
-    // Fyrox handles event loop + windowing.
     let mut executor = Executor::new();
-    executor.add_plugin_constructor(CadViewerConstructor);
+    executor.add_plugin(CadViewer::default());
     executor.run();
     Ok(())
 }
 
-struct CadViewerConstructor;
-
-impl PluginConstructor for CadViewerConstructor {
-    fn create_instance(&self, scene_path: Option<&str>, context: PluginContext) -> Box<dyn Plugin> {
-        Box::new(CadViewer::new(scene_path, context))
-    }
-}
-
+#[derive(Default, Visit, Reflect, Debug)]
 struct CadViewer {
+    #[visit(skip)]
+    #[reflect(hidden)]
     scene: Handle<fyrox::scene::Scene>,
+    #[visit(skip)]
+    #[reflect(hidden)]
     model_node: Handle<Node>,
 
     // Import pipeline
-    tx: Sender<anyhow::Result<ImportResult>>,
-    rx: Receiver<anyhow::Result<ImportResult>>,
+    #[visit(skip)]
+    #[reflect(hidden)]
+    tx: Option<Sender<anyhow::Result<ImportResult>>>,
+    #[visit(skip)]
+    #[reflect(hidden)]
+    rx: Option<Receiver<anyhow::Result<ImportResult>>>,
+    #[visit(skip)]
+    #[reflect(hidden)]
     import_started: bool,
 
     // Camera controls
+    #[visit(skip)]
+    #[reflect(hidden)]
     yaw: f32,
+    #[visit(skip)]
+    #[reflect(hidden)]
     pitch: f32,
+    #[visit(skip)]
+    #[reflect(hidden)]
     distance: f32,
+    #[visit(skip)]
+    #[reflect(hidden)]
     target: Vector3<f32>,
+    #[visit(skip)]
+    #[reflect(hidden)]
     dragging: bool,
+    #[visit(skip)]
+    #[reflect(hidden)]
     last_mouse: Vector2<f32>,
+    #[visit(skip)]
+    #[reflect(hidden)]
     camera: Handle<Node>,
 }
 
 impl CadViewer {
-    fn new(_scene_path: Option<&str>, mut context: PluginContext) -> Self {
+    fn initialize(&mut self, context: PluginContext) {
         let (tx, rx) = unbounded();
+        self.tx = Some(tx);
+        self.rx = Some(rx);
 
         // Create empty scene.
         let mut scene = fyrox::scene::Scene::new();
         scene.rendering_options.ambient_lighting_color = Color::opaque(40, 40, 40);
 
         let camera = CameraBuilder::new(
-            BaseBuilder::new()
-                .with_local_transform(
-                    TransformBuilder::new()
-                        .with_local_position(Vector3::new(0.0, 1.0, -5.0))
-                        .build(),
-                )
+            BaseBuilder::new().with_local_transform(
+                TransformBuilder::new()
+                    .with_local_position(Vector3::new(0.0, 1.0, -5.0))
+                    .build(),
+            ),
         )
         .build(&mut scene.graph);
 
-        DirectionalLightBuilder::new(BaseBuilder::new())
-            .with_intensity(1.2)
-            .build(&mut scene.graph);
+        DirectionalLightBuilder::new(
+            BaseLightBuilder::new(BaseBuilder::new()).with_intensity(1.2),
+        )
+        .build(&mut scene.graph);
 
         let scene_handle = context.scenes.add(scene);
 
-        Self {
-            scene: scene_handle,
-            model_node: Handle::NONE,
-
-            tx,
-            rx,
-            import_started: false,
-
-            yaw: 0.0,
-            pitch: 0.3,
-            distance: 5.0,
-            target: Vector3::new(0.0, 0.0, 0.0),
-            dragging: false,
-            last_mouse: Vector2::new(0.0, 0.0),
-            camera,
-        }
+        self.scene = scene_handle;
+        self.model_node = Handle::NONE;
+        self.import_started = false;
+        self.yaw = 0.0;
+        self.pitch = 0.3;
+        self.distance = 5.0;
+        self.target = Vector3::new(0.0, 0.0, 0.0);
+        self.dragging = false;
+        self.last_mouse = Vector2::new(0.0, 0.0);
+        self.camera = camera;
     }
 
     fn start_import_if_needed(&mut self) {
@@ -120,7 +137,7 @@ impl CadViewer {
             return;
         };
 
-        let tx = self.tx.clone();
+        let tx = self.tx.clone().unwrap();
         std::thread::spawn(move || {
             let job = ImportJob { path };
             let res = cad_core::import::import(job);
@@ -142,43 +159,35 @@ impl CadViewer {
         self.target = Vector3::new(center[0], center[1], center[2]);
         self.distance = (radius * 2.5).max(0.5);
 
-        // Build SurfaceData from raw vertex buffers.
-        // We keep it simple: positions/normals, no UVs.
-        use fyrox::scene::mesh::buffer::{TriangleBuffer, VertexBuffer};
-        use fyrox::scene::mesh::vertex::StaticVertex;
-        use fyrox::core::algebra::{Vector4};
-
         let mut vertices: Vec<StaticVertex> = Vec::with_capacity(m.positions.len());
         for (p, n) in m.positions.iter().zip(m.normals.iter()) {
             vertices.push(StaticVertex {
-                position: Vector3::new(p[0], p[1], p[2]).into(),
-                tex_coord: Vector2::new(0.0, 0.0).into(),
-                normal: Vector3::new(n[0], n[1], n[2]).into(),
-                tangent: Vector4::new(0.0, 0.0, 0.0, 0.0).into(),
+                position: Vector3::new(p[0], p[1], p[2]),
+                tex_coord: Vector2::new(0.0, 0.0),
+                normal: Vector3::new(n[0], n[1], n[2]),
+                tangent: Vector4::new(0.0, 0.0, 0.0, 0.0),
             });
         }
 
-        let vb = VertexBuffer::new(vertices.len(), StaticVertex::layout());
-        let mut vb = vb;
-        vb.set_buffer_data(&vertices);
+        let vb = VertexBuffer::new(vertices.len(), vertices)
+            .expect("Failed to create VertexBuffer");
 
-        let triangles = TriangleBuffer::new(m.indices.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect());
+        let triangles = TriangleBuffer::new(
+            m.indices
+                .chunks_exact(3)
+                .map(|c| TriangleDefinition([c[0], c[1], c[2]]))
+                .collect(),
+        );
 
         let surface_data = SurfaceData::new(vb, triangles);
 
-        let mut material = Material::standard();
-        // Make it a bit matte so lighting reads well.
-        material
-            .set_property("roughnessFactor", 0.85f32)
-            .ok();
+        let material = Material::standard();
 
         let surface = SurfaceBuilder::new(SurfaceResource::new_ok(
-            Uuid::new_v4(),
             ResourceKind::Embedded,
             surface_data,
         ))
         .with_material(MaterialResource::new_ok(
-            Uuid::new_v4(),
             ResourceKind::Embedded,
             material,
         ))
@@ -201,15 +210,19 @@ impl CadViewer {
         let scene = &mut context.scenes[self.scene];
         let graph: &mut Graph = &mut scene.graph;
 
-        if let Some(cam) = graph.try_get_mut(self.camera).ok() {
+        if let Some(cam) = graph.try_get_mut(self.camera) {
             // Orbit around target using yaw/pitch and distance
             let rot = UnitQuaternion::from_euler_angles(self.pitch, self.yaw, 0.0);
             let offset = rot.transform_vector(&Vector3::new(0.0, 0.0, self.distance));
             let pos = self.target + offset;
 
+            // Compute look-at rotation
+            let dir = self.target - pos;
+            let look_rot = UnitQuaternion::face_towards(&dir, &Vector3::y());
+
             cam.local_transform_mut()
                 .set_position(pos)
-                .look_at(self.target, Vector3::y());
+                .set_rotation(look_rot);
         }
     }
 
@@ -220,11 +233,21 @@ impl CadViewer {
 }
 
 impl Plugin for CadViewer {
+    fn init(&mut self, _scene_path: Option<&str>, context: PluginContext) {
+        self.initialize(context);
+    }
+
     fn update(&mut self, context: &mut PluginContext) {
         self.start_import_if_needed();
 
         // Apply import results, if any.
-        while let Ok(msg) = self.rx.try_recv() {
+        let mut results = Vec::new();
+        if let Some(rx) = &self.rx {
+            while let Ok(msg) = rx.try_recv() {
+                results.push(msg);
+            }
+        }
+        for msg in results {
             match msg {
                 Ok(res) => self.build_fyrox_mesh(context, res),
                 Err(e) => log::error!("Import error: {e:#}"),
@@ -260,7 +283,7 @@ impl Plugin for CadViewer {
                 }
                 WindowEvent::KeyboardInput { event, .. } => {
                     if event.state == ElementState::Pressed {
-                        if let fyrox::event::Key::Character(c) = &event.logical_key {
+                        if let Key::Character(c) = &event.logical_key {
                             if c.eq_ignore_ascii_case("r") {
                                 self.reset_view();
                             }

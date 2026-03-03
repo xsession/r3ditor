@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 [features]
 # STEP support is intentionally optional because OpenCascade builds are heavy.
 # Enable with: `cargo run -p cad_viewer --features step -- <file.step>`
-step = ["dep:occt-rs"]
+step = []
 
 [dependencies]
 anyhow = "1"
@@ -16,4 +16,5 @@ log = "0.4"
 parking_lot = "0.12"
 stl_io = "0.7"
 # Optional: OpenCascade wrapper (user must provide system OpenCascade or build toolchain)
-occt-rs = { version = "0.8", optional = true }
+# occt-rs is not published on crates.io; uncomment and point to a git/path source when available.
+# occt-rs = { version = "0.8", optional = true }

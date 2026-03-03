@@ -8,7 +8,6 @@ license = "MIT OR Apache-2.0"
 anyhow = "1"
 log = "0.4"
 env_logger = "0.11"
-uuid = { version = "1", features = ["v4"] }
 
 cad_core = { path = "../cad_core" }
 
