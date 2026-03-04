@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="900" y2="540" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" fill="#60A5FA">
+      <path d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+    <marker id="arrowG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" fill="#34D399">
+      <path d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="540" fill="url(#bgGrad)" rx="12"/>
+  <text x="450" y="38" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">Crate Dependency Graph</text>
+  <line x1="250" y1="48" x2="650" y2="48" stroke="#3B82F6" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- ═══ shared-types (center foundation) ═══ -->
+  <rect x="360" y="440" width="180" height="50" rx="8" fill="#1E3A8A" stroke="#3B82F6" stroke-width="2" filter="url(#shadow)"/>
+  <text x="450" y="462" text-anchor="middle" fill="white" font-size="11" font-weight="700">📦 shared-types</text>
+  <text x="450" y="478" text-anchor="middle" fill="#93C5FD" font-size="8">serde • uuid • chrono • glam</text>
+
+  <!-- ═══ Core crates (Layer 2) ═══ -->
+  <rect x="30" y="320" width="160" height="50" rx="8" fill="#1E293B" stroke="#818CF8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="110" y="342" text-anchor="middle" fill="#A5B4FC" font-size="11" font-weight="700">📦 cad-kernel</text>
+  <text x="110" y="358" text-anchor="middle" fill="#94A3B8" font-size="8">truck • nalgebra • rayon</text>
+
+  <rect x="210" y="320" width="160" height="50" rx="8" fill="#1E293B" stroke="#34D399" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="290" y="342" text-anchor="middle" fill="#6EE7B7" font-size="11" font-weight="700">📦 cam-engine</text>
+  <text x="290" y="358" text-anchor="middle" fill="#94A3B8" font-size="8">CNC • sheet • gcode</text>
+
+  <rect x="390" y="320" width="160" height="50" rx="8" fill="#1E293B" stroke="#FBBF24" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="470" y="342" text-anchor="middle" fill="#FCD34D" font-size="11" font-weight="700">📦 constraint-solver</text>
+  <text x="470" y="358" text-anchor="middle" fill="#94A3B8" font-size="8">nalgebra-sparse</text>
+
+  <rect x="570" y="320" width="140" height="50" rx="8" fill="#1E293B" stroke="#FB7185" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="640" y="342" text-anchor="middle" fill="#FDA4AF" font-size="11" font-weight="700">📦 dfm-analyzer</text>
+  <text x="640" y="358" text-anchor="middle" fill="#94A3B8" font-size="8">rule checks</text>
+
+  <rect x="730" y="320" width="140" height="50" rx="8" fill="#1E293B" stroke="#F472B6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="800" y="342" text-anchor="middle" fill="#F9A8D4" font-size="11" font-weight="700">📦 renderer</text>
+  <text x="800" y="358" text-anchor="middle" fill="#94A3B8" font-size="8">wgpu • egui • winit</text>
+
+  <!-- Dependencies to shared-types -->
+  <g stroke="#475569" stroke-width="1" fill="none" stroke-dasharray="3,3" opacity="0.6">
+    <path d="M 110 370 Q 110 420 360 460" marker-end="url(#arrow)"/>
+    <path d="M 290 370 Q 290 410 360 450" marker-end="url(#arrow)"/>
+    <line x1="450" y1="370" x2="450" y2="440" marker-end="url(#arrow)"/>
+    <path d="M 640 370 Q 640 410 540 450" marker-end="url(#arrow)"/>
+    <path d="M 800 370 Q 800 420 540 460" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- ═══ Integration crates (Layer 3) ═══ -->
+  <rect x="130" y="210" width="170" height="50" rx="8" fill="#1E293B" stroke="#60A5FA" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="215" y="232" text-anchor="middle" fill="#93C5FD" font-size="11" font-weight="700">📦 editor-shell</text>
+  <text x="215" y="248" text-anchor="middle" fill="#94A3B8" font-size="8">ECS • commands • input • UI</text>
+
+  <rect x="360" y="210" width="170" height="50" rx="8" fill="#1E293B" stroke="#A78BFA" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="445" y="232" text-anchor="middle" fill="#C4B5FD" font-size="11" font-weight="700">📦 plugin-runtime</text>
+  <text x="445" y="248" text-anchor="middle" fill="#94A3B8" font-size="8">wasmtime • manifest • registry</text>
+
+  <rect x="600" y="210" width="170" height="50" rx="8" fill="#1E293B" stroke="#38BDF8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="685" y="232" text-anchor="middle" fill="#7DD3FC" font-size="11" font-weight="700">📦 wasm-meshkit</text>
+  <text x="685" y="248" text-anchor="middle" fill="#94A3B8" font-size="8">wasm-bindgen • STL • mesh</text>
+
+  <!-- Deps layer 3 → layer 2 -->
+  <g stroke="#475569" stroke-width="1" fill="none" opacity="0.5">
+    <path d="M 180 260 L 110 320" marker-end="url(#arrow)"/>
+    <path d="M 215 260 L 290 320" marker-end="url(#arrow)"/>
+    <path d="M 240 260 L 470 320" marker-end="url(#arrow)"/>
+    <path d="M 250 260 L 640 320" marker-end="url(#arrow)"/>
+    <path d="M 260 260 L 800 320" marker-end="url(#arrow)"/>
+    <path d="M 445 260 L 290 320" marker-end="url(#arrow)"/>
+    <path d="M 685 260 L 800 320" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- ═══ Application crates (Layer 4 — top) ═══ -->
+  <rect x="40" y="80" width="160" height="55" rx="8" fill="#1D4ED8" stroke="#60A5FA" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="120" y="102" text-anchor="middle" fill="white" font-size="11" font-weight="700">📦 api-gateway</text>
+  <text x="120" y="118" text-anchor="middle" fill="#BFDBFE" font-size="8">Axum • sqlx • redis</text>
+  <text x="120" y="130" text-anchor="middle" fill="#93C5FD" font-size="7">REST / SSE / JWT</text>
+
+  <rect x="220" y="80" width="160" height="55" rx="8" fill="#047857" stroke="#34D399" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="300" y="102" text-anchor="middle" fill="white" font-size="11" font-weight="700">📦 workers ×3</text>
+  <text x="300" y="118" text-anchor="middle" fill="#A7F3D0" font-size="8">CAD • Analysis • CAM</text>
+  <text x="300" y="130" text-anchor="middle" fill="#6EE7B7" font-size="7">Redis stream consumers</text>
+
+  <rect x="400" y="80" width="160" height="55" rx="8" fill="#7C3AED" stroke="#A78BFA" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="480" y="102" text-anchor="middle" fill="white" font-size="11" font-weight="700">📦 desktop (Tauri)</text>
+  <text x="480" y="118" text-anchor="middle" fill="#DDD6FE" font-size="8">Tauri 2.2 • IPC</text>
+  <text x="480" y="130" text-anchor="middle" fill="#C4B5FD" font-size="7">Win / Mac / Linux</text>
+
+  <rect x="580" y="80" width="150" height="55" rx="8" fill="#BE185D" stroke="#F472B6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="655" y="102" text-anchor="middle" fill="white" font-size="11" font-weight="700">📦 bench</text>
+  <text x="655" y="118" text-anchor="middle" fill="#FECDD3" font-size="8">Criterion benchmarks</text>
+  <text x="655" y="130" text-anchor="middle" fill="#FDA4AF" font-size="7">CI perf gates</text>
+
+  <rect x="750" y="80" width="120" height="55" rx="8" fill="#0369A1" stroke="#38BDF8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="810" y="102" text-anchor="middle" fill="white" font-size="11" font-weight="700">React UI</text>
+  <text x="810" y="118" text-anchor="middle" fill="#BAE6FD" font-size="8">TypeScript • Vite</text>
+  <text x="810" y="130" text-anchor="middle" fill="#7DD3FC" font-size="7">Tailwind • Zustand</text>
+
+  <!-- Deps layer 4 → layer 3 -->
+  <g stroke="#475569" stroke-width="1" fill="none" opacity="0.4">
+    <path d="M 120 135 L 215 210" marker-end="url(#arrow)"/>
+    <path d="M 300 135 L 215 210" marker-end="url(#arrow)"/>
+    <path d="M 300 135 L 445 210" marker-end="url(#arrow)"/>
+    <path d="M 480 135 L 215 210" marker-end="url(#arrow)"/>
+    <path d="M 480 135 L 445 210" marker-end="url(#arrow)"/>
+    <path d="M 810 135 L 685 210" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- Legend -->
+  <rect x="30" y="502" width="840" height="26" rx="6" fill="#1E293B" opacity="0.8"/>
+  <text x="50" y="519" fill="#94A3B8" font-size="8" font-weight="600">LEGEND:</text>
+  <rect x="110" y="509" width="10" height="10" rx="2" fill="#3B82F6"/>
+  <text x="126" y="519" fill="#93C5FD" font-size="8">Foundation</text>
+  <rect x="190" y="509" width="10" height="10" rx="2" fill="#818CF8"/>
+  <text x="206" y="519" fill="#A5B4FC" font-size="8">Core Engines</text>
+  <rect x="290" y="509" width="10" height="10" rx="2" fill="#60A5FA"/>
+  <text x="306" y="519" fill="#93C5FD" font-size="8">Integration</text>
+  <rect x="380" y="509" width="10" height="10" rx="2" fill="#34D399"/>
+  <text x="396" y="519" fill="#6EE7B7" font-size="8">Applications</text>
+  <line x1="480" y1="514" x2="510" y2="514" stroke="#475569" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="516" y="519" fill="#94A3B8" font-size="8">Dependency</text>
+</svg>

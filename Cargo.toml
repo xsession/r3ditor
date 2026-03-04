@@ -1,0 +1,143 @@
+[workspace]
+resolver = "2"
+members = [
+    "packages/api-gateway",
+    "packages/worker-analysis",
+    "packages/worker-cad",
+    "packages/worker-cam",
+    "packages/shared-types",
+    "packages/wasm-meshkit",
+    "packages/cad-kernel",
+    "packages/cam-engine",
+    "packages/constraint-solver",
+    "packages/renderer",
+    "packages/editor-shell",
+    "packages/plugin-runtime",
+    "packages/dfm-analyzer",
+    "apps/desktop/src-tauri",
+    "packages/bench",
+]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/xsession/r3ditor"
+
+[workspace.dependencies]
+# ─── Async Runtime ───
+tokio = { version = "1", features = ["full"] }
+rayon = "1.10"
+
+# ─── Web Framework ───
+axum = { version = "0.7", features = ["multipart"] }
+axum-extra = "0.9"
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
+
+# ─── Serialization ───
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bincode = "1"
+
+# ─── Database ───
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
+redis = { version = "0.25", features = ["tokio-comp", "streams"] }
+
+# ─── Storage ───
+aws-sdk-s3 = "1"
+aws-config = "1"
+
+# ─── GPU ───
+wgpu = "28.0"
+naga = "28.0"
+
+# ─── Math ───
+glam = { version = "0.29", features = ["serde"] }
+nalgebra = { version = "0.33", features = ["rayon"] }
+nalgebra-sparse = "0.10"
+
+# ─── Geometry (Truck CAD Kernel) ───
+truck-base = "0.6"
+truck-geotrait = "0.6"
+truck-geometry = "0.6"
+truck-topology = "0.6"
+truck-modeling = "0.6"
+truck-shapeops = "0.6"
+truck-meshalgo = "0.6"
+truck-polymesh = "0.6"
+truck-platform = "0.6"
+truck-rendimpl = "0.6"
+truck-stepio = "0.6"
+
+# ─── UI ───
+egui = "0.31"
+egui-wgpu = "0.31"
+egui-winit = "0.31"
+winit = "0.30"
+
+# ─── Plugin Runtime ───
+wasmtime = "28.0"
+
+# ─── Desktop (Tauri) ───
+tauri = { version = "2.2", features = ["devtools"] }
+tauri-build = "2.0"
+tauri-plugin-store = "2.2"
+tauri-plugin-dialog = "2.2"
+tauri-plugin-fs = "2.2"
+tauri-plugin-shell = "2.2"
+
+# ─── Observability ───
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
+metrics = "0.24"
+metrics-exporter-prometheus = "0.16"
+
+# ─── API Documentation ───
+utoipa = { version = "4", features = ["axum_extras", "chrono"] }
+utoipa-swagger-ui = { version = "6", features = ["axum"] }
+
+# ─── Utilities ───
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+hex = "0.4"
+anyhow = "1"
+thiserror = "1"
+image = "0.25"
+bytemuck = { version = "1", features = ["derive"] }
+
+# ─── File Formats ───
+dxf = "0.6"
+printpdf = "0.7"
+
+# ─── WASM ───
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = ["console", "Performance", "Window"] }
+
+# ─── Benchmarks ───
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# ─── Internal crates ───
+shared-types = { path = "packages/shared-types" }
+cad-kernel = { path = "packages/cad-kernel" }
+cam-engine = { path = "packages/cam-engine" }
+constraint-solver = { path = "packages/constraint-solver" }
+dfm-analyzer = { path = "packages/dfm-analyzer" }
+renderer = { path = "packages/renderer" }
+editor-shell = { path = "packages/editor-shell" }
+plugin-runtime = { path = "packages/plugin-runtime" }
+wasm-meshkit = { path = "packages/wasm-meshkit" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 2

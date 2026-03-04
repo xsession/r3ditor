@@ -1,0 +1,30 @@
+[package]
+name = "r3ditor-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "r3ditor desktop application — Tauri 2 shell"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+shared-types = { workspace = true }
+cad-kernel = { workspace = true }
+cam-engine = { workspace = true }
+dfm-analyzer = { workspace = true }
+renderer = { workspace = true }
+editor-shell = { workspace = true }
+plugin-runtime = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = "0.3"
+anyhow = { workspace = true }
+tauri = { workspace = true }
+tauri-plugin-store = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
+tauri-plugin-fs = { workspace = true }
+tauri-plugin-shell = { workspace = true }

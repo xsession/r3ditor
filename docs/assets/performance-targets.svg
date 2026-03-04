@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="900" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <rect width="900" height="400" fill="url(#bgGrad)" rx="12"/>
+  <text x="450" y="36" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">Performance Targets &amp; Budgets</text>
+  <line x1="250" y1="46" x2="650" y2="46" stroke="#34D399" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Metric Cards Row 1 -->
+  <rect x="30" y="65" width="190" height="90" rx="10" fill="#1E293B" stroke="#34D399" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="125" y="92" text-anchor="middle" fill="#34D399" font-size="28" font-weight="800">60</text>
+  <text x="125" y="108" text-anchor="middle" fill="#94A3B8" font-size="9">FPS Target</text>
+  <text x="125" y="124" text-anchor="middle" fill="#6EE7B7" font-size="8">@ 2M triangles</text>
+  <text x="125" y="142" text-anchor="middle" fill="#64748B" font-size="7">16.67 ms frame budget</text>
+
+  <rect x="240" y="65" width="190" height="90" rx="10" fill="#1E293B" stroke="#818CF8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="335" y="92" text-anchor="middle" fill="#818CF8" font-size="28" font-weight="800">&lt;50</text>
+  <text x="335" y="108" text-anchor="middle" fill="#94A3B8" font-size="9">ms Boolean Ops</text>
+  <text x="335" y="124" text-anchor="middle" fill="#A5B4FC" font-size="8">@ 10K faces</text>
+  <text x="335" y="142" text-anchor="middle" fill="#64748B" font-size="7">Truck B-Rep kernel</text>
+
+  <rect x="450" y="65" width="190" height="90" rx="10" fill="#1E293B" stroke="#F472B6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="545" y="92" text-anchor="middle" fill="#F472B6" font-size="28" font-weight="800">&lt;100</text>
+  <text x="545" y="108" text-anchor="middle" fill="#94A3B8" font-size="9">ms Tessellation</text>
+  <text x="545" y="124" text-anchor="middle" fill="#F9A8D4" font-size="8">@ 100K faces</text>
+  <text x="545" y="142" text-anchor="middle" fill="#64748B" font-size="7">Rayon parallel</text>
+
+  <rect x="660" y="65" width="210" height="90" rx="10" fill="#1E293B" stroke="#FBBF24" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="765" y="92" text-anchor="middle" fill="#FBBF24" font-size="28" font-weight="800">512</text>
+  <text x="765" y="108" text-anchor="middle" fill="#94A3B8" font-size="9">MB Memory Budget</text>
+  <text x="765" y="124" text-anchor="middle" fill="#FCD34D" font-size="8">Typical session</text>
+  <text x="765" y="142" text-anchor="middle" fill="#64748B" font-size="7">Geometry + GPU + UI</text>
+
+  <!-- Metric Cards Row 2 -->
+  <rect x="30" y="175" width="190" height="90" rx="10" fill="#1E293B" stroke="#38BDF8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="125" y="202" text-anchor="middle" fill="#38BDF8" font-size="28" font-weight="800">&lt;200</text>
+  <text x="125" y="218" text-anchor="middle" fill="#94A3B8" font-size="9">ms Constraint Solve</text>
+  <text x="125" y="234" text-anchor="middle" fill="#7DD3FC" font-size="8">@ 100 constraints</text>
+  <text x="125" y="252" text-anchor="middle" fill="#64748B" font-size="7">Newton-Raphson</text>
+
+  <rect x="240" y="175" width="190" height="90" rx="10" fill="#1E293B" stroke="#FB923C" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="335" y="202" text-anchor="middle" fill="#FB923C" font-size="28" font-weight="800">&lt;1</text>
+  <text x="335" y="218" text-anchor="middle" fill="#94A3B8" font-size="9">sec Nesting (100 parts)</text>
+  <text x="335" y="234" text-anchor="middle" fill="#FDBA74" font-size="8">Bottom-left fill</text>
+  <text x="335" y="252" text-anchor="middle" fill="#64748B" font-size="7">Sheet optimization</text>
+
+  <rect x="450" y="175" width="190" height="90" rx="10" fill="#1E293B" stroke="#A78BFA" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="545" y="202" text-anchor="middle" fill="#A78BFA" font-size="28" font-weight="800">&lt;5</text>
+  <text x="545" y="218" text-anchor="middle" fill="#94A3B8" font-size="9">sec DFM Analysis</text>
+  <text x="545" y="234" text-anchor="middle" fill="#C4B5FD" font-size="8">Full part scan</text>
+  <text x="545" y="252" text-anchor="middle" fill="#64748B" font-size="7">10+ rules evaluated</text>
+
+  <rect x="660" y="175" width="210" height="90" rx="10" fill="#1E293B" stroke="#FB7185" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="765" y="202" text-anchor="middle" fill="#FB7185" font-size="28" font-weight="800">&lt;3</text>
+  <text x="765" y="218" text-anchor="middle" fill="#94A3B8" font-size="9">sec Cold Start</text>
+  <text x="765" y="234" text-anchor="middle" fill="#FDA4AF" font-size="8">Desktop app launch</text>
+  <text x="765" y="252" text-anchor="middle" fill="#64748B" font-size="7">Tauri + wgpu init</text>
+
+  <!-- Memory breakdown bar -->
+  <text x="60" y="298" fill="#94A3B8" font-size="10" font-weight="600">Memory Budget Breakdown (512 MB)</text>
+
+  <rect x="30" y="308" width="840" height="30" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+
+  <!-- Segments -->
+  <rect x="30" y="308" width="328" height="30" rx="6" fill="#818CF8" opacity="0.4"/>
+  <text x="194" y="328" text-anchor="middle" fill="#A5B4FC" font-size="8" font-weight="600">Geometry B-Rep: 200 MB (39%)</text>
+
+  <rect x="358" y="308" width="213" height="30" fill="#F472B6" opacity="0.3"/>
+  <text x="465" y="328" text-anchor="middle" fill="#F9A8D4" font-size="8" font-weight="600">GPU Buffers: 128 MB (25%)</text>
+
+  <rect x="571" y="308" width="131" height="30" fill="#34D399" opacity="0.3"/>
+  <text x="637" y="328" text-anchor="middle" fill="#6EE7B7" font-size="8" font-weight="600">Mesh: 80 MB (16%)</text>
+
+  <rect x="702" y="308" width="82" height="30" fill="#FBBF24" opacity="0.3"/>
+  <text x="743" y="328" text-anchor="middle" fill="#FCD34D" font-size="8" font-weight="600">Undo: 48 MB</text>
+
+  <rect x="784" y="308" width="86" height="30" rx="6" fill="#38BDF8" opacity="0.3"/>
+  <text x="827" y="328" text-anchor="middle" fill="#7DD3FC" font-size="8" font-weight="600">UI: 56 MB</text>
+
+  <!-- Thread budget -->
+  <text x="60" y="364" fill="#94A3B8" font-size="10" font-weight="600">Thread Budget</text>
+  <rect x="30" y="374" width="120" height="18" rx="4" fill="#3B82F6" opacity="0.3"/>
+  <text x="90" y="387" text-anchor="middle" fill="#93C5FD" font-size="7" font-weight="600">Main: 1 thread</text>
+  <rect x="160" y="374" width="160" height="18" rx="4" fill="#818CF8" opacity="0.3"/>
+  <text x="240" y="387" text-anchor="middle" fill="#A5B4FC" font-size="7" font-weight="600">Rayon pool: N-1 cores</text>
+  <rect x="330" y="374" width="150" height="18" rx="4" fill="#34D399" opacity="0.3"/>
+  <text x="405" y="387" text-anchor="middle" fill="#6EE7B7" font-size="7" font-weight="600">Tokio: 4 threads</text>
+  <rect x="490" y="374" width="150" height="18" rx="4" fill="#FBBF24" opacity="0.3"/>
+  <text x="565" y="387" text-anchor="middle" fill="#FCD34D" font-size="7" font-weight="600">wgpu device: 1 thread</text>
+  <rect x="650" y="374" width="150" height="18" rx="4" fill="#F472B6" opacity="0.3"/>
+  <text x="725" y="387" text-anchor="middle" fill="#F9A8D4" font-size="7" font-weight="600">File I/O: 2 threads</text>
+</svg>

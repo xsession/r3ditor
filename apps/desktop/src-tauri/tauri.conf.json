@@ -1,0 +1,44 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegui/nicegui/main/.schemas/tauri-v2.schema.json",
+  "productName": "r3ditor",
+  "version": "0.1.0",
+  "identifier": "com.r3ditor.app",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "cd .. && npm run dev",
+    "beforeBuildCommand": "cd .. && npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "r3ditor — CAD/CAM Editor",
+        "width": 1600,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 600,
+        "resizable": true,
+        "decorations": true,
+        "transparent": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "plugins": {
+    "store": {},
+    "dialog": {
+      "all": true
+    },
+    "fs": {
+      "scope": {
+        "allow": ["$APPDATA/**", "$DOCUMENT/**", "$DOWNLOAD/**"],
+        "deny": []
+      }
+    },
+    "shell": {
+      "open": true
+    }
+  }
+}

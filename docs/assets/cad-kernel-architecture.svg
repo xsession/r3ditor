@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 480" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="900" y2="480" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" fill="#34D399">
+      <path d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="480" fill="url(#bgGrad)" rx="12"/>
+  <text x="450" y="36" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">CAD Kernel — Dual Kernel Architecture</text>
+  <line x1="230" y1="46" x2="670" y2="46" stroke="#818CF8" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Primary: Truck B-Rep -->
+  <rect x="40" y="65" width="400" height="350" rx="10" fill="#1E293B" stroke="#818CF8" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="40" y="65" width="400" height="38" rx="10" fill="#4338CA"/>
+  <rect x="40" y="95" width="400" height="8" fill="#4338CA"/>
+  <text x="240" y="90" text-anchor="middle" fill="white" font-size="14" font-weight="700">Primary — Truck B-Rep Kernel</text>
+  <text x="240" y="90" text-anchor="middle" fill="white" font-size="14" font-weight="700">Primary — Truck B-Rep Kernel</text>
+
+  <!-- NURBS -->
+  <rect x="56" y="116" width="176" height="55" rx="6" fill="#312E81" opacity="0.5"/>
+  <text x="144" y="137" text-anchor="middle" fill="#A5B4FC" font-size="10" font-weight="600">NURBS Surfaces</text>
+  <text x="144" y="152" text-anchor="middle" fill="#94A3B8" font-size="8">truck-geometry 0.6</text>
+  <text x="144" y="164" text-anchor="middle" fill="#64748B" font-size="7">Rational B-splines</text>
+
+  <!-- Topology -->
+  <rect x="248" y="116" width="176" height="55" rx="6" fill="#312E81" opacity="0.5"/>
+  <text x="336" y="137" text-anchor="middle" fill="#A5B4FC" font-size="10" font-weight="600">B-Rep Topology</text>
+  <text x="336" y="152" text-anchor="middle" fill="#94A3B8" font-size="8">truck-topology 0.6</text>
+  <text x="336" y="164" text-anchor="middle" fill="#64748B" font-size="7">Vertex → Edge → Face → Shell</text>
+
+  <!-- Boolean Ops -->
+  <rect x="56" y="180" width="176" height="55" rx="6" fill="#312E81" opacity="0.5"/>
+  <text x="144" y="201" text-anchor="middle" fill="#A5B4FC" font-size="10" font-weight="600">Boolean Operations</text>
+  <text x="144" y="216" text-anchor="middle" fill="#94A3B8" font-size="8">truck-shapeops 0.6</text>
+  <text x="144" y="228" text-anchor="middle" fill="#64748B" font-size="7">Union • Subtract • Intersect</text>
+
+  <!-- Tessellation -->
+  <rect x="248" y="180" width="176" height="55" rx="6" fill="#312E81" opacity="0.5"/>
+  <text x="336" y="201" text-anchor="middle" fill="#A5B4FC" font-size="10" font-weight="600">Tessellation</text>
+  <text x="336" y="216" text-anchor="middle" fill="#94A3B8" font-size="8">truck-meshalgo 0.6</text>
+  <text x="336" y="228" text-anchor="middle" fill="#64748B" font-size="7">Rayon parallel mesh gen</text>
+
+  <!-- STEP I/O -->
+  <rect x="56" y="244" width="176" height="55" rx="6" fill="#312E81" opacity="0.5"/>
+  <text x="144" y="265" text-anchor="middle" fill="#A5B4FC" font-size="10" font-weight="600">STEP I/O</text>
+  <text x="144" y="280" text-anchor="middle" fill="#94A3B8" font-size="8">truck-stepio 0.6</text>
+  <text x="144" y="292" text-anchor="middle" fill="#64748B" font-size="7">Import / Export AP214</text>
+
+  <!-- Modeling -->
+  <rect x="248" y="244" width="176" height="55" rx="6" fill="#312E81" opacity="0.5"/>
+  <text x="336" y="265" text-anchor="middle" fill="#A5B4FC" font-size="10" font-weight="600">Solid Modeling</text>
+  <text x="336" y="280" text-anchor="middle" fill="#94A3B8" font-size="8">truck-modeling 0.6</text>
+  <text x="336" y="292" text-anchor="middle" fill="#64748B" font-size="7">Extrude • Revolve • Loft</text>
+
+  <!-- Parametric Feature Tree -->
+  <rect x="56" y="310" width="368" height="50" rx="6" fill="#1E1B4B" stroke="#818CF8" stroke-width="1"/>
+  <text x="240" y="332" text-anchor="middle" fill="#C4B5FD" font-size="10" font-weight="600">Parametric Feature Tree — History-Based Editing</text>
+  <text x="240" y="348" text-anchor="middle" fill="#94A3B8" font-size="8">Extrude • Cut • Fillet • Chamfer • Shell • Revolve • Pattern • Mirror • Draft • Hole • Thread</text>
+
+  <!-- Benefits badges -->
+  <rect x="56" y="370" width="80" height="20" rx="4" fill="#059669" opacity="0.3"/>
+  <text x="96" y="384" text-anchor="middle" fill="#34D399" font-size="7" font-weight="600">Pure Rust</text>
+  <rect x="144" y="370" width="80" height="20" rx="4" fill="#059669" opacity="0.3"/>
+  <text x="184" y="384" text-anchor="middle" fill="#34D399" font-size="7" font-weight="600">WASM-ready</text>
+  <rect x="232" y="370" width="80" height="20" rx="4" fill="#059669" opacity="0.3"/>
+  <text x="272" y="384" text-anchor="middle" fill="#34D399" font-size="7" font-weight="600">MIT License</text>
+  <rect x="320" y="370" width="102" height="20" rx="4" fill="#059669" opacity="0.3"/>
+  <text x="371" y="384" text-anchor="middle" fill="#34D399" font-size="7" font-weight="600">Rayon Parallel</text>
+
+  <!-- Secondary: OpenCASCADE -->
+  <rect x="480" y="65" width="390" height="170" rx="10" fill="#1E293B" stroke="#FBBF24" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="480" y="65" width="390" height="36" rx="10" fill="#B45309"/>
+  <rect x="480" y="93" width="390" height="8" fill="#B45309"/>
+  <text x="675" y="88" text-anchor="middle" fill="white" font-size="13" font-weight="700">Fallback — OpenCASCADE (FFI)</text>
+
+  <rect x="496" y="112" width="176" height="50" rx="6" fill="#78350F" opacity="0.4"/>
+  <text x="584" y="133" text-anchor="middle" fill="#FCD34D" font-size="10" font-weight="600">Advanced NURBS</text>
+  <text x="584" y="150" text-anchor="middle" fill="#94A3B8" font-size="8">Complex surface intersection</text>
+
+  <rect x="680" y="112" width="176" height="50" rx="6" fill="#78350F" opacity="0.4"/>
+  <text x="768" y="133" text-anchor="middle" fill="#FCD34D" font-size="10" font-weight="600">STEP/IGES</text>
+  <text x="768" y="150" text-anchor="middle" fill="#94A3B8" font-size="8">Full AP203/AP214 support</text>
+
+  <rect x="496" y="172" width="360" height="28" rx="4" fill="#451A03" opacity="0.3"/>
+  <text x="675" y="191" text-anchor="middle" fill="#FDE68A" font-size="8">opencascade-rs 0.2 • C++ FFI • Used when Truck lacks coverage</text>
+
+  <text x="675" y="222" text-anchor="middle" fill="#78350F" font-size="8">⚠ Not WASM-compatible — Desktop only fallback</text>
+
+  <!-- Constraint Solver -->
+  <rect x="480" y="256" width="390" height="160" rx="10" fill="#1E293B" stroke="#F472B6" stroke-width="1.5" filter="url(#shadow)"/>
+  <rect x="480" y="256" width="390" height="36" rx="10" fill="#BE185D"/>
+  <rect x="480" y="284" width="390" height="8" fill="#BE185D"/>
+  <text x="675" y="280" text-anchor="middle" fill="white" font-size="13" font-weight="700">Constraint Solver Engine</text>
+
+  <rect x="496" y="302" width="176" height="48" rx="6" fill="#831843" opacity="0.4"/>
+  <text x="584" y="322" text-anchor="middle" fill="#F9A8D4" font-size="10" font-weight="600">2D Sketch Solver</text>
+  <text x="584" y="338" text-anchor="middle" fill="#94A3B8" font-size="8">15 constraint types</text>
+
+  <rect x="680" y="302" width="176" height="48" rx="6" fill="#831843" opacity="0.4"/>
+  <text x="768" y="322" text-anchor="middle" fill="#F9A8D4" font-size="10" font-weight="600">3D Assembly Solver</text>
+  <text x="768" y="338" text-anchor="middle" fill="#94A3B8" font-size="8">Mate / Align / Offset</text>
+
+  <rect x="496" y="360" width="360" height="36" rx="4" fill="#500724" opacity="0.3"/>
+  <text x="675" y="377" text-anchor="middle" fill="#FECDD3" font-size="8" font-weight="600">Newton-Raphson iteration • Sparse Jacobian (nalgebra-sparse)</text>
+  <text x="675" y="390" text-anchor="middle" fill="#94A3B8" font-size="7">Convergence: &lt; 50 iterations • Tolerance: 1e-10</text>
+
+  <!-- Arrow from primary to fallback -->
+  <path d="M 440 140 C 460 140 470 140 480 140" stroke="#FBBF24" stroke-width="1.5" fill="none" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+  <text x="458" y="134" text-anchor="middle" fill="#FBBF24" font-size="7" transform="rotate(-90, 458, 134)">fallback</text>
+
+  <!-- Bottom bar -->
+  <rect x="40" y="430" width="830" height="34" rx="8" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="450" y="452" text-anchor="middle" fill="#64748B" font-size="9">Math: glam 0.29 (fast SIMD) + nalgebra 0.33 (linear algebra) • Undo/Redo: Command pattern with full history stack</text>
+</svg>

@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="900" y2="600" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" fill="#60A5FA">
+      <path d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" fill="#34D399">
+      <path d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="600" fill="url(#bgGrad)" rx="12"/>
+  <text x="450" y="36" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">Deployment Topology</text>
+  <line x1="280" y1="46" x2="620" y2="46" stroke="#3B82F6" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- ═══ MODE 1: Desktop ═══ -->
+  <text x="150" y="78" text-anchor="middle" fill="#93C5FD" font-size="12" font-weight="700">DESKTOP MODE</text>
+  <rect x="30" y="88" width="240" height="250" rx="10" fill="#1E293B" stroke="#3B82F6" stroke-width="1.5" filter="url(#shadow)"/>
+
+  <!-- Desktop icon -->
+  <rect x="110" y="100" width="80" height="55" rx="4" fill="none" stroke="#60A5FA" stroke-width="2"/>
+  <rect x="130" y="155" width="40" height="4" rx="2" fill="#60A5FA"/>
+  <rect x="145" y="159" width="10" height="8" rx="1" fill="#60A5FA" opacity="0.5"/>
+
+  <text x="150" y="185" text-anchor="middle" fill="white" font-size="10" font-weight="600">Tauri 2.2 + WebView</text>
+
+  <rect x="50" y="196" width="200" height="24" rx="4" fill="#1D4ED8" opacity="0.4"/>
+  <text x="150" y="213" text-anchor="middle" fill="#93C5FD" font-size="8">React + Tailwind UI</text>
+
+  <rect x="50" y="226" width="200" height="24" rx="4" fill="#312E81" opacity="0.4"/>
+  <text x="150" y="243" text-anchor="middle" fill="#A5B4FC" font-size="8">egui Viewport (wgpu native)</text>
+
+  <rect x="50" y="256" width="200" height="24" rx="4" fill="#1E3A8A" opacity="0.4"/>
+  <text x="150" y="273" text-anchor="middle" fill="#93C5FD" font-size="8">Rust Core Engine (all crates)</text>
+
+  <rect x="50" y="286" width="200" height="24" rx="4" fill="#172554" opacity="0.4"/>
+  <text x="150" y="303" text-anchor="middle" fill="#60A5FA" font-size="8">Local File System I/O</text>
+
+  <text x="150" y="332" text-anchor="middle" fill="#475569" font-size="7">Win / Mac / Linux</text>
+
+  <!-- ═══ MODE 2: Cloud ═══ -->
+  <text x="450" y="78" text-anchor="middle" fill="#6EE7B7" font-size="12" font-weight="700">CLOUD MODE</text>
+  <rect x="320" y="88" width="260" height="420" rx="10" fill="#1E293B" stroke="#34D399" stroke-width="1.5" filter="url(#shadow)"/>
+
+  <!-- Cloud icon -->
+  <path d="M420 110 C420 98 430 90 445 90 C448 82 458 76 470 78 C480 72 496 78 498 90 C510 90 516 100 510 110 Z" fill="none" stroke="#34D399" stroke-width="2"/>
+
+  <text x="450" y="130" text-anchor="middle" fill="white" font-size="10" font-weight="600">Kubernetes Cluster</text>
+
+  <!-- K8s services -->
+  <rect x="338" y="144" width="224" height="30" rx="5" fill="#064E3B" opacity="0.5"/>
+  <text x="450" y="164" text-anchor="middle" fill="#6EE7B7" font-size="9" font-weight="600">API Gateway (Axum)</text>
+
+  <rect x="338" y="182" width="106" height="30" rx="5" fill="#78350F" opacity="0.4"/>
+  <text x="391" y="202" text-anchor="middle" fill="#FCD34D" font-size="8">Worker: CAD</text>
+
+  <rect x="450" y="182" width="112" height="30" rx="5" fill="#78350F" opacity="0.4"/>
+  <text x="506" y="202" text-anchor="middle" fill="#FCD34D" font-size="8">Worker: Analysis</text>
+
+  <rect x="338" y="220" width="224" height="30" rx="5" fill="#78350F" opacity="0.4"/>
+  <text x="450" y="240" text-anchor="middle" fill="#FCD34D" font-size="8">Worker: CAM (Toolpath + Nesting)</text>
+
+  <!-- Data tier -->
+  <line x1="338" y1="264" x2="562" y2="264" stroke="#334155" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="450" y="280" text-anchor="middle" fill="#64748B" font-size="8" font-weight="600">DATA TIER</text>
+
+  <rect x="338" y="290" width="106" height="40" rx="5" fill="#1E3A8A" opacity="0.4"/>
+  <text x="391" y="307" text-anchor="middle" fill="#93C5FD" font-size="9" font-weight="600">PostgreSQL</text>
+  <text x="391" y="322" text-anchor="middle" fill="#64748B" font-size="7">16-alpine</text>
+
+  <rect x="450" y="290" width="112" height="40" rx="5" fill="#7F1D1D" opacity="0.4"/>
+  <text x="506" y="307" text-anchor="middle" fill="#FCA5A5" font-size="9" font-weight="600">Redis</text>
+  <text x="506" y="322" text-anchor="middle" fill="#64748B" font-size="7">7-alpine</text>
+
+  <rect x="338" y="340" width="224" height="40" rx="5" fill="#713F12" opacity="0.3"/>
+  <text x="450" y="357" text-anchor="middle" fill="#FDE68A" font-size="9" font-weight="600">MinIO Object Storage</text>
+  <text x="450" y="372" text-anchor="middle" fill="#64748B" font-size="7">S3-compatible • CAD files</text>
+
+  <!-- Monitoring -->
+  <line x1="338" y1="394" x2="562" y2="394" stroke="#334155" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="450" y="410" text-anchor="middle" fill="#64748B" font-size="8" font-weight="600">OBSERVABILITY</text>
+
+  <rect x="338" y="420" width="106" height="34" rx="5" fill="#831843" opacity="0.3"/>
+  <text x="391" y="442" text-anchor="middle" fill="#F9A8D4" font-size="8">Prometheus</text>
+
+  <rect x="450" y="420" width="112" height="34" rx="5" fill="#831843" opacity="0.3"/>
+  <text x="506" y="442" text-anchor="middle" fill="#F9A8D4" font-size="8">Grafana</text>
+
+  <rect x="338" y="462" width="224" height="30" rx="5" fill="#1E1B4B" opacity="0.3"/>
+  <text x="450" y="482" text-anchor="middle" fill="#C4B5FD" font-size="8">Tracing (OpenTelemetry)</text>
+
+  <!-- ═══ MODE 3: Hybrid ═══ -->
+  <text x="740" y="78" text-anchor="middle" fill="#C4B5FD" font-size="12" font-weight="700">HYBRID MODE</text>
+  <rect x="620" y="88" width="250" height="250" rx="10" fill="#1E293B" stroke="#A78BFA" stroke-width="1.5" filter="url(#shadow)"/>
+
+  <!-- Hybrid icon: desktop + cloud combined -->
+  <rect x="700" y="98" width="60" height="42" rx="3" fill="none" stroke="#A78BFA" stroke-width="1.5"/>
+  <rect x="715" y="140" width="30" height="3" rx="1" fill="#A78BFA"/>
+  <path d="M760 110 C760 102 766 96 774 96 C775 92 780 88 786 89 C790 86 798 89 799 95 C805 95 808 100 805 106 Z" fill="none" stroke="#A78BFA" stroke-width="1.5"/>
+  <line x1="760" y1="115" x2="775" y2="100" stroke="#A78BFA" stroke-width="1" stroke-dasharray="3,2"/>
+
+  <text x="745" y="164" text-anchor="middle" fill="white" font-size="10" font-weight="600">Desktop + Cloud Sync</text>
+
+  <rect x="636" y="178" width="218" height="24" rx="4" fill="#4C1D95" opacity="0.3"/>
+  <text x="745" y="195" text-anchor="middle" fill="#C4B5FD" font-size="8">Local: Editor + Render + CAD</text>
+
+  <rect x="636" y="208" width="218" height="24" rx="4" fill="#4C1D95" opacity="0.3"/>
+  <text x="745" y="225" text-anchor="middle" fill="#C4B5FD" font-size="8">Cloud: DFM Analysis + Nesting</text>
+
+  <rect x="636" y="238" width="218" height="24" rx="4" fill="#4C1D95" opacity="0.3"/>
+  <text x="745" y="255" text-anchor="middle" fill="#C4B5FD" font-size="8">Cloud: Quote Generation</text>
+
+  <rect x="636" y="268" width="218" height="24" rx="4" fill="#4C1D95" opacity="0.3"/>
+  <text x="745" y="285" text-anchor="middle" fill="#C4B5FD" font-size="8">Sync: File + Settings + History</text>
+
+  <rect x="636" y="298" width="218" height="24" rx="4" fill="#4C1D95" opacity="0.3"/>
+  <text x="745" y="315" text-anchor="middle" fill="#C4B5FD" font-size="8">SSE Real-time Job Updates</text>
+
+  <!-- Connection arrows between modes -->
+  <g stroke="#475569" stroke-width="1.5" fill="none" stroke-dasharray="6,3" opacity="0.5">
+    <path d="M 270 210 C 300 210 305 200 320 200" marker-end="url(#arr)"/>
+    <path d="M 580 210 C 600 210 610 210 620 210" marker-end="url(#arr)"/>
+  </g>
+
+  <!-- Browser / E-commerce -->
+  <rect x="620" y="380" width="250" height="130" rx="10" fill="#1E293B" stroke="#38BDF8" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="745" y="404" text-anchor="middle" fill="#7DD3FC" font-size="11" font-weight="700">Browser / E-commerce</text>
+
+  <rect x="636" y="414" width="218" height="24" rx="4" fill="#0C4A6E" opacity="0.3"/>
+  <text x="745" y="431" text-anchor="middle" fill="#7DD3FC" font-size="8">WASM + WebGPU (meshkit)</text>
+
+  <rect x="636" y="444" width="218" height="24" rx="4" fill="#0C4A6E" opacity="0.3"/>
+  <text x="745" y="461" text-anchor="middle" fill="#7DD3FC" font-size="8">Shopify • WooCommerce • BigCommerce</text>
+
+  <rect x="636" y="474" width="218" height="24" rx="4" fill="#0C4A6E" opacity="0.3"/>
+  <text x="745" y="491" text-anchor="middle" fill="#7DD3FC" font-size="8">Wix • Magento Platform Adapters</text>
+
+  <!-- Connection from cloud to browser -->
+  <line x1="580" y1="400" x2="620" y2="420" stroke="#38BDF8" stroke-width="1" stroke-dasharray="4,3" opacity="0.5" marker-end="url(#arr)"/>
+
+  <!-- Bottom summary -->
+  <rect x="30" y="555" width="840" height="30" rx="8" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+  <text x="450" y="575" text-anchor="middle" fill="#64748B" font-size="9">All modes share the same Rust crate ecosystem — compile once, deploy everywhere • Docker Compose for local dev • K8s for production</text>
+</svg>

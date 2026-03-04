@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="900" y2="400" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" fill="#38BDF8">
+      <path d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="400" fill="url(#bgGrad)" rx="12"/>
+  <text x="450" y="36" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">Dual UI Strategy — Editor Shell</text>
+  <line x1="260" y1="46" x2="640" y2="46" stroke="#38BDF8" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Tauri Window Container -->
+  <rect x="40" y="60" width="820" height="320" rx="12" fill="none" stroke="#475569" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="60" y="82" fill="#64748B" font-size="9" font-weight="600">TAURI 2.2 DESKTOP WINDOW</text>
+
+  <!-- Title bar -->
+  <rect x="56" y="92" width="788" height="28" rx="6" fill="#0F172A" stroke="#334155" stroke-width="1"/>
+  <circle cx="74" cy="106" r="5" fill="#EF4444"/>
+  <circle cx="92" cy="106" r="5" fill="#FBBF24"/>
+  <circle cx="110" cy="106" r="5" fill="#22C55E"/>
+  <text x="450" y="110" text-anchor="middle" fill="#64748B" font-size="8">r3ditor — Untitled Part.manu</text>
+
+  <!-- Toolbar (React) -->
+  <rect x="56" y="124" width="788" height="32" rx="0" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <rect x="64" y="130" width="50" height="20" rx="3" fill="#1D4ED8" opacity="0.5"/>
+  <text x="89" y="144" text-anchor="middle" fill="#93C5FD" font-size="7">File</text>
+  <rect x="120" y="130" width="50" height="20" rx="3" fill="#1D4ED8" opacity="0.5"/>
+  <text x="145" y="144" text-anchor="middle" fill="#93C5FD" font-size="7">Edit</text>
+  <rect x="176" y="130" width="50" height="20" rx="3" fill="#1D4ED8" opacity="0.5"/>
+  <text x="201" y="144" text-anchor="middle" fill="#93C5FD" font-size="7">View</text>
+  <rect x="240" y="130" width="24" height="20" rx="3" fill="#334155"/>
+  <text x="252" y="144" text-anchor="middle" fill="#94A3B8" font-size="8">⟲</text>
+  <rect x="268" y="130" width="24" height="20" rx="3" fill="#334155"/>
+  <text x="280" y="144" text-anchor="middle" fill="#94A3B8" font-size="8">⟳</text>
+  <rect x="296" y="130" width="24" height="20" rx="3" fill="#334155"/>
+  <text x="308" y="144" text-anchor="middle" fill="#94A3B8" font-size="8">💾</text>
+  <text x="830" y="144" text-anchor="end" fill="#475569" font-size="7">React + Tailwind</text>
+
+  <!-- Left Panel: Feature Tree (React) -->
+  <rect x="56" y="160" width="160" height="200" rx="0" fill="#0F172A" stroke="#334155" stroke-width="0.5"/>
+  <rect x="60" y="164" width="152" height="20" rx="3" fill="#1E293B"/>
+  <text x="136" y="178" text-anchor="middle" fill="#94A3B8" font-size="8" font-weight="600">Feature Tree</text>
+
+  <text x="76" y="198" fill="#6EE7B7" font-size="8">▼ Part 1</text>
+  <text x="86" y="214" fill="#94A3B8" font-size="7">├ Origin</text>
+  <text x="86" y="228" fill="#93C5FD" font-size="7">├ Sketch 1</text>
+  <text x="86" y="242" fill="#A5B4FC" font-size="7">├ Extrude 1</text>
+  <text x="86" y="256" fill="#FCD34D" font-size="7">├ Fillet 1</text>
+  <text x="86" y="270" fill="#F9A8D4" font-size="7">├ Hole Pattern</text>
+  <text x="86" y="284" fill="#FDBA74" font-size="7">└ Chamfer 1</text>
+
+  <rect x="60" y="296" width="152" height="20" rx="3" fill="#1E293B"/>
+  <text x="136" y="310" text-anchor="middle" fill="#94A3B8" font-size="8" font-weight="600">DFM Results</text>
+  <text x="76" y="328" fill="#34D399" font-size="8">Score: 87/100 ✓</text>
+  <text x="76" y="342" fill="#FBBF24" font-size="7">⚠ 2 warnings</text>
+  <text x="196" y="356" text-anchor="end" fill="#475569" font-size="6">React</text>
+
+  <!-- Center: 3D Viewport (egui + wgpu) -->
+  <rect x="220" y="160" width="430" height="200" rx="0" fill="#111827" stroke="#334155" stroke-width="0.5"/>
+
+  <!-- Grid representation -->
+  <g stroke="#1F2937" stroke-width="0.5" opacity="0.5">
+    <line x1="220" y1="260" x2="650" y2="260"/>
+    <line x1="435" y1="160" x2="435" y2="360"/>
+    <!-- Perspective grid lines -->
+    <line x1="300" y1="360" x2="435" y2="210"/>
+    <line x1="570" y1="360" x2="435" y2="210"/>
+    <line x1="260" y1="310" x2="610" y2="310"/>
+  </g>
+
+  <!-- 3D object (wireframe box) -->
+  <g stroke="#60A5FA" stroke-width="1.5" fill="none">
+    <rect x="380" y="210" width="80" height="60" rx="2"/>
+    <line x1="380" y1="210" x2="400" y2="190"/>
+    <line x1="460" y1="210" x2="480" y2="190"/>
+    <line x1="460" y1="270" x2="480" y2="250"/>
+    <rect x="400" y="190" width="80" height="60" rx="2"/>
+  </g>
+
+  <!-- Viewport labels -->
+  <text x="230" y="176" fill="#475569" font-size="7">Perspective</text>
+  <text x="635" y="176" fill="#475569" font-size="7" text-anchor="end">60 FPS</text>
+
+  <!-- Gizmo -->
+  <line x1="236" y1="340" x2="260" y2="340" stroke="#EF4444" stroke-width="2"/>
+  <text x="264" y="343" fill="#EF4444" font-size="7">X</text>
+  <line x1="236" y1="340" x2="236" y2="316" stroke="#22C55E" stroke-width="2"/>
+  <text x="233" y="312" fill="#22C55E" font-size="7">Y</text>
+  <line x1="236" y1="340" x2="252" y2="350" stroke="#3B82F6" stroke-width="2"/>
+  <text x="256" y="354" fill="#3B82F6" font-size="7">Z</text>
+
+  <text x="435" y="356" text-anchor="middle" fill="#334155" font-size="7">egui + wgpu 28 (GPU-accelerated)</text>
+
+  <!-- Right Panel: Properties (React) -->
+  <rect x="654" y="160" width="190" height="200" rx="0" fill="#0F172A" stroke="#334155" stroke-width="0.5"/>
+  <rect x="658" y="164" width="182" height="20" rx="3" fill="#1E293B"/>
+  <text x="749" y="178" text-anchor="middle" fill="#94A3B8" font-size="8" font-weight="600">Properties</text>
+
+  <text x="668" y="198" fill="#64748B" font-size="7" font-weight="600">EXTRUDE 1</text>
+  <text x="668" y="214" fill="#94A3B8" font-size="7">Depth</text>
+  <rect x="720" y="204" width="60" height="14" rx="2" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="750" y="214" text-anchor="middle" fill="#E2E8F0" font-size="7">25.00 mm</text>
+
+  <text x="668" y="234" fill="#94A3B8" font-size="7">Direction</text>
+  <rect x="720" y="224" width="60" height="14" rx="2" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="750" y="234" text-anchor="middle" fill="#E2E8F0" font-size="7">Normal</text>
+
+  <text x="668" y="254" fill="#94A3B8" font-size="7">Draft Angle</text>
+  <rect x="720" y="244" width="60" height="14" rx="2" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="750" y="254" text-anchor="middle" fill="#E2E8F0" font-size="7">0.0°</text>
+
+  <text x="668" y="280" fill="#64748B" font-size="7" font-weight="600">MATERIAL</text>
+  <text x="668" y="296" fill="#94A3B8" font-size="7">Aluminum 6061-T6</text>
+  <text x="668" y="310" fill="#64748B" font-size="7">ρ = 2.70 g/cm³</text>
+
+  <text x="668" y="332" fill="#64748B" font-size="7" font-weight="600">COST ESTIMATE</text>
+  <text x="668" y="348" fill="#34D399" font-size="9" font-weight="600">$24.50</text>
+  <text x="720" y="348" fill="#64748B" font-size="7">per unit</text>
+  <text x="834" y="356" text-anchor="end" fill="#475569" font-size="6">React</text>
+
+  <!-- Status bar -->
+  <rect x="56" y="364" width="788" height="18" rx="0" fill="#0F172A" stroke="#334155" stroke-width="0.5"/>
+  <text x="68" y="377" fill="#34D399" font-size="7">● Connected</text>
+  <text x="170" y="377" fill="#94A3B8" font-size="7">Vertices: 12,480</text>
+  <text x="300" y="377" fill="#94A3B8" font-size="7">Faces: 8,320</text>
+  <text x="420" y="377" fill="#94A3B8" font-size="7">Memory: 128 MB</text>
+  <text x="830" y="377" text-anchor="end" fill="#94A3B8" font-size="7">v0.2.0</text>
+</svg>

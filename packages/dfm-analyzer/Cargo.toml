@@ -1,0 +1,16 @@
+[package]
+name = "dfm-analyzer"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "DFM (Design for Manufacturability) analysis — wall thickness, draft angles, undercuts, etc."
+
+[dependencies]
+shared-types = { workspace = true }
+cad-kernel = { workspace = true }
+glam = { workspace = true }
+serde = { workspace = true }
+uuid = { workspace = true }
+rayon = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

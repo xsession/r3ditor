@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 340" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="900" y2="340" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <rect width="900" height="340" fill="url(#bgGrad)" rx="12"/>
+  <text x="450" y="36" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">Technology Matrix</text>
+  <line x1="300" y1="46" x2="600" y2="46" stroke="#3B82F6" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Header row -->
+  <rect x="30" y="60" width="160" height="34" rx="6" fill="#1D4ED8"/>
+  <text x="110" y="82" text-anchor="middle" fill="white" font-size="10" font-weight="700">Category</text>
+  <rect x="200" y="60" width="280" height="34" rx="6" fill="#1D4ED8"/>
+  <text x="340" y="82" text-anchor="middle" fill="white" font-size="10" font-weight="700">Technology</text>
+  <rect x="490" y="60" width="200" height="34" rx="6" fill="#1D4ED8"/>
+  <text x="590" y="82" text-anchor="middle" fill="white" font-size="10" font-weight="700">Version</text>
+  <rect x="700" y="60" width="170" height="34" rx="6" fill="#1D4ED8"/>
+  <text x="785" y="82" text-anchor="middle" fill="white" font-size="10" font-weight="700">Purpose</text>
+
+  <!-- Row 1: Language -->
+  <rect x="30" y="100" width="160" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="119" text-anchor="middle" fill="#F472B6" font-size="9" font-weight="600">Language</text>
+  <rect x="200" y="100" width="280" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="340" y="119" text-anchor="middle" fill="#E2E8F0" font-size="9">Rust 2021 + TypeScript 5.6</text>
+  <rect x="490" y="100" width="200" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="590" y="119" text-anchor="middle" fill="#94A3B8" font-size="9">Edition 2021</text>
+  <rect x="700" y="100" width="170" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="785" y="119" text-anchor="middle" fill="#94A3B8" font-size="9">Core + Frontend</text>
+
+  <!-- Row 2: GPU -->
+  <rect x="30" y="132" width="160" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="151" text-anchor="middle" fill="#818CF8" font-size="9" font-weight="600">GPU</text>
+  <rect x="200" y="132" width="280" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="340" y="151" text-anchor="middle" fill="#E2E8F0" font-size="9">wgpu + naga (WGSL)</text>
+  <rect x="490" y="132" width="200" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="590" y="151" text-anchor="middle" fill="#94A3B8" font-size="9">28.0</text>
+  <rect x="700" y="132" width="170" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="785" y="151" text-anchor="middle" fill="#94A3B8" font-size="9">Render + Compute</text>
+
+  <!-- Row 3: CAD -->
+  <rect x="30" y="164" width="160" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="183" text-anchor="middle" fill="#34D399" font-size="9" font-weight="600">CAD Kernel</text>
+  <rect x="200" y="164" width="280" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="340" y="183" text-anchor="middle" fill="#E2E8F0" font-size="9">Truck + OpenCASCADE (FFI)</text>
+  <rect x="490" y="164" width="200" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="590" y="183" text-anchor="middle" fill="#94A3B8" font-size="9">0.6 / 0.2</text>
+  <rect x="700" y="164" width="170" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="785" y="183" text-anchor="middle" fill="#94A3B8" font-size="9">B-Rep + NURBS</text>
+
+  <!-- Row 4: UI -->
+  <rect x="30" y="196" width="160" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="215" text-anchor="middle" fill="#FBBF24" font-size="9" font-weight="600">UI Framework</text>
+  <rect x="200" y="196" width="280" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="340" y="215" text-anchor="middle" fill="#E2E8F0" font-size="9">egui + React + Tailwind</text>
+  <rect x="490" y="196" width="200" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="590" y="215" text-anchor="middle" fill="#94A3B8" font-size="9">0.31 / 18 / 3.4</text>
+  <rect x="700" y="196" width="170" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="785" y="215" text-anchor="middle" fill="#94A3B8" font-size="9">Viewport + Panels</text>
+
+  <!-- Row 5: Desktop -->
+  <rect x="30" y="228" width="160" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="247" text-anchor="middle" fill="#38BDF8" font-size="9" font-weight="600">Desktop Shell</text>
+  <rect x="200" y="228" width="280" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="340" y="247" text-anchor="middle" fill="#E2E8F0" font-size="9">Tauri 2.2 + winit</text>
+  <rect x="490" y="228" width="200" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="590" y="247" text-anchor="middle" fill="#94A3B8" font-size="9">2.2 / 0.30</text>
+  <rect x="700" y="228" width="170" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="785" y="247" text-anchor="middle" fill="#94A3B8" font-size="9">Cross-platform</text>
+
+  <!-- Row 6: Backend -->
+  <rect x="30" y="260" width="160" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="279" text-anchor="middle" fill="#FB7185" font-size="9" font-weight="600">Backend</text>
+  <rect x="200" y="260" width="280" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="340" y="279" text-anchor="middle" fill="#E2E8F0" font-size="9">Axum + sqlx + Redis</text>
+  <rect x="490" y="260" width="200" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="590" y="279" text-anchor="middle" fill="#94A3B8" font-size="9">0.7 / 0.7 / 0.25</text>
+  <rect x="700" y="260" width="170" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="785" y="279" text-anchor="middle" fill="#94A3B8" font-size="9">API + Workers</text>
+
+  <!-- Row 7: Infra -->
+  <rect x="30" y="292" width="160" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="110" y="311" text-anchor="middle" fill="#A78BFA" font-size="9" font-weight="600">Infrastructure</text>
+  <rect x="200" y="292" width="280" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="340" y="311" text-anchor="middle" fill="#E2E8F0" font-size="9">Docker + K8s + GitHub Actions</text>
+  <rect x="490" y="292" width="200" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="590" y="311" text-anchor="middle" fill="#94A3B8" font-size="9">Latest</text>
+  <rect x="700" y="292" width="170" height="28" rx="4" fill="#1E293B" stroke="#334155" stroke-width="0.5"/>
+  <text x="785" y="311" text-anchor="middle" fill="#94A3B8" font-size="9">Deploy + CI/CD</text>
+</svg>

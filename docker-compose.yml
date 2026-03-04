@@ -1,0 +1,105 @@
+version: "3.9"
+
+services:
+  # ---------- Infrastructure ----------
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: r3ditor
+      POSTGRES_USER: r3ditor
+      POSTGRES_PASSWORD: r3ditor_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U r3ditor"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---------- Application Services ----------
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgres://r3ditor:r3ditor_dev@postgres:5432/r3ditor
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-secret-change-in-production
+      UPLOAD_DIR: /data/uploads
+      RUST_LOG: info,api_gateway=debug
+    volumes:
+      - upload_data:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-analysis:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker-analysis
+    environment:
+      DATABASE_URL: postgres://r3ditor:r3ditor_dev@postgres:5432/r3ditor
+      REDIS_URL: redis://redis:6379
+      RUST_LOG: info,worker_analysis=debug
+    volumes:
+      - upload_data:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-cad:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker-cad
+    environment:
+      DATABASE_URL: postgres://r3ditor:r3ditor_dev@postgres:5432/r3ditor
+      REDIS_URL: redis://redis:6379
+      RUST_LOG: info,worker_cad=debug
+    volumes:
+      - upload_data:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-cam:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker-cam
+    environment:
+      DATABASE_URL: postgres://r3ditor:r3ditor_dev@postgres:5432/r3ditor
+      REDIS_URL: redis://redis:6379
+      RUST_LOG: info,worker_cam=debug
+    volumes:
+      - upload_data:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pg_data:
+  redis_data:
+  upload_data:

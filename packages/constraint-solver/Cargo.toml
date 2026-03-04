@@ -1,0 +1,15 @@
+[package]
+name = "constraint-solver"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "2D geometric constraint solver (Newton-Raphson) and 3D assembly constraints"
+
+[dependencies]
+shared-types = { workspace = true }
+glam = { workspace = true }
+nalgebra = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

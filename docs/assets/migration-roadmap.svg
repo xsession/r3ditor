@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" font-family="Inter, system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="900" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+    <filter id="shadow" x="-4%" y="-4%" width="108%" height="112%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto" fill="#60A5FA">
+      <path d="M 0 0 L 10 5 L 0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="360" fill="url(#bgGrad)" rx="12"/>
+  <text x="450" y="36" text-anchor="middle" fill="#F8FAFC" font-size="18" font-weight="700">Migration Roadmap — 5 Phases</text>
+  <line x1="260" y1="46" x2="640" y2="46" stroke="#3B82F6" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Timeline line -->
+  <line x1="80" y1="90" x2="830" y2="90" stroke="#334155" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Phase dots -->
+  <circle cx="110" cy="90" r="14" fill="#1D4ED8" stroke="#60A5FA" stroke-width="2"/>
+  <text x="110" y="95" text-anchor="middle" fill="white" font-size="10" font-weight="700">1</text>
+
+  <circle cx="290" cy="90" r="14" fill="#7C3AED" stroke="#A78BFA" stroke-width="2"/>
+  <text x="290" y="95" text-anchor="middle" fill="white" font-size="10" font-weight="700">2</text>
+
+  <circle cx="470" cy="90" r="14" fill="#059669" stroke="#34D399" stroke-width="2"/>
+  <text x="470" y="95" text-anchor="middle" fill="white" font-size="10" font-weight="700">3</text>
+
+  <circle cx="650" cy="90" r="14" fill="#B45309" stroke="#FBBF24" stroke-width="2"/>
+  <text x="650" y="95" text-anchor="middle" fill="white" font-size="10" font-weight="700">4</text>
+
+  <circle cx="800" cy="90" r="14" fill="#BE185D" stroke="#F472B6" stroke-width="2"/>
+  <text x="800" y="95" text-anchor="middle" fill="white" font-size="10" font-weight="700">5</text>
+
+  <!-- Connecting arrows -->
+  <line x1="124" y1="90" x2="276" y2="90" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="304" y1="90" x2="456" y2="90" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="484" y1="90" x2="636" y2="90" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+  <line x1="664" y1="90" x2="786" y2="90" stroke="#475569" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- Phase 1 details -->
+  <rect x="30" y="120" width="160" height="220" rx="8" fill="#1E293B" stroke="#60A5FA" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="110" y="144" text-anchor="middle" fill="#93C5FD" font-size="11" font-weight="700">Foundation</text>
+  <line x1="46" y1="152" x2="174" y2="152" stroke="#334155" stroke-width="0.5"/>
+  <text x="52" y="170" fill="#94A3B8" font-size="8">✦ Rust workspace setup</text>
+  <text x="52" y="186" fill="#94A3B8" font-size="8">✦ shared-types crate</text>
+  <text x="52" y="202" fill="#94A3B8" font-size="8">✦ Truck B-Rep kernel</text>
+  <text x="52" y="218" fill="#94A3B8" font-size="8">✦ wgpu renderer init</text>
+  <text x="52" y="234" fill="#94A3B8" font-size="8">✦ Basic egui viewport</text>
+  <text x="52" y="250" fill="#94A3B8" font-size="8">✦ STL import/export</text>
+  <text x="52" y="266" fill="#94A3B8" font-size="8">✦ Unit test framework</text>
+  <rect x="46" y="280" width="128" height="20" rx="4" fill="#1D4ED8" opacity="0.3"/>
+  <text x="110" y="294" text-anchor="middle" fill="#60A5FA" font-size="7" font-weight="600">Weeks 1–6</text>
+
+  <!-- Phase 2 details -->
+  <rect x="210" y="120" width="160" height="220" rx="8" fill="#1E293B" stroke="#A78BFA" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="290" y="144" text-anchor="middle" fill="#C4B5FD" font-size="11" font-weight="700">Core CAD</text>
+  <line x1="226" y1="152" x2="354" y2="152" stroke="#334155" stroke-width="0.5"/>
+  <text x="228" y="170" fill="#94A3B8" font-size="8">✦ Constraint solver</text>
+  <text x="228" y="186" fill="#94A3B8" font-size="8">✦ Parametric features</text>
+  <text x="228" y="202" fill="#94A3B8" font-size="8">✦ History undo/redo</text>
+  <text x="228" y="218" fill="#94A3B8" font-size="8">✦ STEP import/export</text>
+  <text x="228" y="234" fill="#94A3B8" font-size="8">✦ PBR shading</text>
+  <text x="228" y="250" fill="#94A3B8" font-size="8">✦ Sketch tools</text>
+  <text x="228" y="266" fill="#94A3B8" font-size="8">✦ Boolean operations</text>
+  <rect x="226" y="280" width="128" height="20" rx="4" fill="#7C3AED" opacity="0.3"/>
+  <text x="290" y="294" text-anchor="middle" fill="#A78BFA" font-size="7" font-weight="600">Weeks 7–14</text>
+
+  <!-- Phase 3 details -->
+  <rect x="390" y="120" width="160" height="220" rx="8" fill="#1E293B" stroke="#34D399" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="470" y="144" text-anchor="middle" fill="#6EE7B7" font-size="11" font-weight="700">Manufacturing</text>
+  <line x1="406" y1="152" x2="534" y2="152" stroke="#334155" stroke-width="0.5"/>
+  <text x="406" y="170" fill="#94A3B8" font-size="8">✦ CAM engine</text>
+  <text x="406" y="186" fill="#94A3B8" font-size="8">✦ G-code generation</text>
+  <text x="406" y="202" fill="#94A3B8" font-size="8">✦ DFM analyzer</text>
+  <text x="406" y="218" fill="#94A3B8" font-size="8">✦ Nesting engine</text>
+  <text x="406" y="234" fill="#94A3B8" font-size="8">✦ Sheet metal ops</text>
+  <text x="406" y="250" fill="#94A3B8" font-size="8">✦ Toolpath viz</text>
+  <text x="406" y="266" fill="#94A3B8" font-size="8">✦ Material catalog</text>
+  <rect x="406" y="280" width="128" height="20" rx="4" fill="#059669" opacity="0.3"/>
+  <text x="470" y="294" text-anchor="middle" fill="#34D399" font-size="7" font-weight="600">Weeks 15–22</text>
+
+  <!-- Phase 4 details -->
+  <rect x="570" y="120" width="160" height="220" rx="8" fill="#1E293B" stroke="#FBBF24" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="650" y="144" text-anchor="middle" fill="#FCD34D" font-size="11" font-weight="700">Platform</text>
+  <line x1="586" y1="152" x2="714" y2="152" stroke="#334155" stroke-width="0.5"/>
+  <text x="586" y="170" fill="#94A3B8" font-size="8">✦ Plugin runtime</text>
+  <text x="586" y="186" fill="#94A3B8" font-size="8">✦ Tauri desktop shell</text>
+  <text x="586" y="202" fill="#94A3B8" font-size="8">✦ API gateway</text>
+  <text x="586" y="218" fill="#94A3B8" font-size="8">✦ Worker services</text>
+  <text x="586" y="234" fill="#94A3B8" font-size="8">✦ React UI panels</text>
+  <text x="586" y="250" fill="#94A3B8" font-size="8">✦ Docker infra</text>
+  <text x="586" y="266" fill="#94A3B8" font-size="8">✦ E-comm adapters</text>
+  <rect x="586" y="280" width="128" height="20" rx="4" fill="#B45309" opacity="0.3"/>
+  <text x="650" y="294" text-anchor="middle" fill="#FBBF24" font-size="7" font-weight="600">Weeks 23–30</text>
+
+  <!-- Phase 5 details -->
+  <rect x="740" y="120" width="140" height="220" rx="8" fill="#1E293B" stroke="#F472B6" stroke-width="1.5" filter="url(#shadow)"/>
+  <text x="810" y="144" text-anchor="middle" fill="#F9A8D4" font-size="11" font-weight="700">Polish</text>
+  <line x1="756" y1="152" x2="864" y2="152" stroke="#334155" stroke-width="0.5"/>
+  <text x="756" y="170" fill="#94A3B8" font-size="8">✦ Perf optimization</text>
+  <text x="756" y="186" fill="#94A3B8" font-size="8">✦ GPU compute</text>
+  <text x="756" y="202" fill="#94A3B8" font-size="8">✦ WASM web build</text>
+  <text x="756" y="218" fill="#94A3B8" font-size="8">✦ CI/CD finalize</text>
+  <text x="756" y="234" fill="#94A3B8" font-size="8">✦ Benchmarks</text>
+  <text x="756" y="250" fill="#94A3B8" font-size="8">✦ Documentation</text>
+  <text x="756" y="266" fill="#94A3B8" font-size="8">✦ v1.0 release</text>
+  <rect x="756" y="280" width="108" height="20" rx="4" fill="#BE185D" opacity="0.3"/>
+  <text x="810" y="294" text-anchor="middle" fill="#F472B6" font-size="7" font-weight="600">Weeks 31–36</text>
+</svg>

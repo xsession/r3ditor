@@ -1,0 +1,28 @@
+[package]
+name = "cad-kernel"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pure-Rust B-Rep/NURBS CAD kernel based on Truck — parametric modeling, booleans, fillets"
+
+[dependencies]
+shared-types = { workspace = true }
+glam = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+rayon = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+# Truck CAD kernel crates
+truck-base = { workspace = true }
+truck-geotrait = { workspace = true }
+truck-geometry = { workspace = true }
+truck-topology = { workspace = true }
+truck-modeling = { workspace = true }
+truck-shapeops = { workspace = true }
+truck-meshalgo = { workspace = true }
+truck-polymesh = { workspace = true }
+truck-stepio = { workspace = true }
