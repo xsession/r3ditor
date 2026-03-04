@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "r3ditor"
+dynamic = ["version"]
+description = "Modern Onshape-style 3D model importer/editor with SolveSpace constraint solver"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = [
+    "flask>=3.0.0",
+    "werkzeug>=3.0.0",
+    "numpy>=1.26.0",
+    "trimesh>=4.0.0",
+    "python-solvespace>=3.0.8",
+    "numpy-stl>=3.1.0",
+    "scipy>=1.12.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "pytest-cov"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
