@@ -26,10 +26,10 @@ class ViewportErrorBoundary extends React.Component<
   render() {
     if (this.state.error) {
       return (
-        <div className="flex items-center justify-center w-full h-full bg-editor-bg text-editor-error text-sm p-4">
+        <div className="flex items-center justify-center w-full h-full bg-fusion-panel text-red-400 text-sm p-4">
           <div className="text-center">
             <p className="font-bold mb-2">3D Viewport Error</p>
-            <p className="text-editor-muted text-xs">{this.state.error}</p>
+            <p className="text-fusion-text-disabled text-xs">{this.state.error}</p>
           </div>
         </div>
       );
@@ -43,14 +43,10 @@ class ViewportErrorBoundary extends React.Component<
 // ────────────────────────────────────────────
 function toolToTransformMode(tool: Tool): 'translate' | 'rotate' | 'scale' | null {
   switch (tool) {
-    case 'move':
-      return 'translate';
-    case 'rotate':
-      return 'rotate';
-    case 'scale':
-      return 'scale';
-    default:
-      return null;
+    case 'move': return 'translate';
+    case 'rotate': return 'rotate';
+    case 'scale': return 'scale';
+    default: return null;
   }
 }
 
@@ -58,12 +54,7 @@ function toolToTransformMode(tool: Tool): 'translate' | 'rotate' | 'scale' | nul
 // Single interactive entity mesh
 // ────────────────────────────────────────────
 function EntityMesh({
-  id,
-  name,
-  isSelected,
-  position,
-  rotation,
-  scale,
+  id, name, isSelected, position, rotation, scale, entityType, suppressed,
 }: {
   id: string;
   name: string;
@@ -71,6 +62,8 @@ function EntityMesh({
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
+  entityType: string;
+  suppressed: boolean;
 }) {
   const meshRef = useRef<THREE.Mesh>(null!);
   const activeTool = useEditorStore((s) => s.activeTool);
@@ -81,7 +74,7 @@ function EntityMesh({
       e.stopPropagation();
       useEditorStore.getState().select(id);
     },
-    [id]
+    [id],
   );
 
   const handleTransformChange = useCallback(() => {
@@ -96,6 +89,21 @@ function EntityMesh({
     });
   }, [id]);
 
+  if (suppressed) return null;
+
+  // Choose geometry based on type
+  const geometry = entityType === 'cylinder'
+    ? <cylinderGeometry args={[10, 10, 30, 32]} />
+    : entityType === 'sphere'
+      ? <sphereGeometry args={[10, 32, 16]} />
+      : <boxGeometry args={[20, 20, 20]} />;
+
+  const edgesGeo = entityType === 'cylinder'
+    ? new THREE.CylinderGeometry(10.05, 10.05, 30.1, 32)
+    : entityType === 'sphere'
+      ? new THREE.SphereGeometry(10.05, 32, 16)
+      : new THREE.BoxGeometry(20.1, 20.1, 20.1);
+
   return (
     <>
       <mesh
@@ -104,14 +112,10 @@ function EntityMesh({
         rotation={rotation}
         scale={scale}
         onClick={handleClick}
-        onPointerOver={() => {
-          document.body.style.cursor = 'pointer';
-        }}
-        onPointerOut={() => {
-          document.body.style.cursor = 'default';
-        }}
+        onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
+        onPointerOut={() => { document.body.style.cursor = 'default'; }}
       >
-        <boxGeometry args={[20, 20, 20]} />
+        {geometry}
         <meshStandardMaterial
           color={isSelected ? '#40b4ff' : '#808090'}
           metalness={0.15}
@@ -119,7 +123,7 @@ function EntityMesh({
         />
         {isSelected && (
           <lineSegments>
-            <edgesGeometry args={[new THREE.BoxGeometry(20.1, 20.1, 20.1)]} />
+            <edgesGeometry args={[edgesGeo]} />
             <lineBasicMaterial color="#40b4ff" />
           </lineSegments>
         )}
@@ -128,13 +132,13 @@ function EntityMesh({
       {/* Entity label */}
       {isSelected && meshRef.current && (
         <Html position={[position[0], position[1] + 13, position[2]]} center>
-          <div className="bg-editor-surface/90 text-editor-accent text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap border border-editor-border">
+          <div className="bg-fusion-surface/90 text-fusion-blue text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap border border-fusion-border-light">
             {name}
           </div>
         </Html>
       )}
 
-      {/* Transform gizmo when tool matches */}
+      {/* Transform gizmo */}
       {isSelected && transformMode && meshRef.current && (
         <TransformControls
           object={meshRef.current}
@@ -148,109 +152,89 @@ function EntityMesh({
 }
 
 // ────────────────────────────────────────────
-// Sketch overlay (2D line drawing on the ground plane)
+// Sketch overlay (2D line drawing on a plane)
 // ────────────────────────────────────────────
 function SketchOverlay() {
   const sketchPoints = useEditorStore((s) => s.sketchPoints);
+  const sketchPlane = useEditorStore((s) => s.sketchPlane);
   const { camera, raycaster, gl } = useThree();
-  const groundPlane = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
+
+  // Determine plane normal/position based on sketchPlane
+  const planeNormal = sketchPlane === 'XZ' ? new THREE.Vector3(0, 1, 0)
+    : sketchPlane === 'YZ' ? new THREE.Vector3(1, 0, 0)
+    : new THREE.Vector3(0, 0, 1); // XY default
+  const groundPlane = useRef(new THREE.Plane(planeNormal, 0));
+
+  useEffect(() => {
+    groundPlane.current = new THREE.Plane(planeNormal, 0);
+  }, [sketchPlane]);
 
   useEffect(() => {
     const canvas = gl.domElement;
-
     const handlePointerDown = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
       const mouse = new THREE.Vector2(
         ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -((e.clientY - rect.top) / rect.height) * 2 + 1
+        -((e.clientY - rect.top) / rect.height) * 2 + 1,
       );
       raycaster.setFromCamera(mouse, camera);
       const hit = new THREE.Vector3();
       if (raycaster.ray.intersectPlane(groundPlane.current, hit)) {
-        // Snap to 1-unit grid
-        const snapped = {
+        useEditorStore.getState().addSketchPoint({
           x: Math.round(hit.x),
-          y: Math.round(hit.z),
-        };
-        useEditorStore.getState().addSketchPoint(snapped);
+          y: Math.round(hit.y || hit.z),
+          id: '',
+          isConstruction: false,
+        });
       }
     };
-
     canvas.addEventListener('pointerdown', handlePointerDown);
     return () => canvas.removeEventListener('pointerdown', handlePointerDown);
-  }, [camera, raycaster, gl]);
+  }, [camera, raycaster, gl, sketchPlane]);
 
-  if (sketchPoints.length < 2) {
-    return (
-      <>
-        {/* Draw dots for individual points */}
-        {sketchPoints.map((pt, i) => (
-          <mesh key={i} position={[pt.x, 0.05, pt.y]}>
-            <sphereGeometry args={[0.4, 8, 8]} />
-            <meshBasicMaterial color="#40b4ff" />
-          </mesh>
-        ))}
-        {/* Sketch plane indicator */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-          <planeGeometry args={[200, 200]} />
-          <meshBasicMaterial
-            color="#40b4ff"
-            transparent
-            opacity={0.03}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      </>
-    );
-  }
+  // Convert sketch points to 3D positions based on plane
+  const to3D = (pt: { x: number; y: number }): [number, number, number] => {
+    if (sketchPlane === 'XZ') return [pt.x, 0.05, pt.y];
+    if (sketchPlane === 'YZ') return [0.05, pt.x, pt.y];
+    return [pt.x, pt.y, 0.05]; // XY
+  };
 
-  const linePoints: [number, number, number][] = sketchPoints.map((p) => [
-    p.x,
-    0.05,
-    p.y,
-  ]);
+  const planeRotation: [number, number, number] = sketchPlane === 'XZ'
+    ? [-Math.PI / 2, 0, 0]
+    : sketchPlane === 'YZ'
+    ? [0, Math.PI / 2, 0]
+    : [0, 0, 0];
 
   return (
     <>
       {/* Sketch plane indicator */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+      <mesh rotation={planeRotation} position={[0, 0, 0]}>
         <planeGeometry args={[200, 200]} />
-        <meshBasicMaterial
-          color="#40b4ff"
-          transparent
-          opacity={0.03}
-          side={THREE.DoubleSide}
-        />
+        <meshBasicMaterial color="#40b4ff" transparent opacity={0.03} side={THREE.DoubleSide} />
       </mesh>
 
-      {/* Sketch lines */}
-      <Line
-        points={linePoints}
-        color="#40b4ff"
-        lineWidth={2}
-      />
+      {/* Lines */}
+      {sketchPoints.length >= 2 && (
+        <Line
+          points={sketchPoints.map((p) => to3D(p))}
+          color="#40b4ff"
+          lineWidth={2}
+        />
+      )}
 
-      {/* Sketch vertices */}
+      {/* Vertices */}
       {sketchPoints.map((pt, i) => (
-        <mesh key={i} position={[pt.x, 0.05, pt.y]}>
+        <mesh key={i} position={to3D(pt)}>
           <sphereGeometry args={[0.4, 8, 8]} />
           <meshBasicMaterial color="#60c8ff" />
         </mesh>
       ))}
 
-      {/* Show coordinates on last point */}
+      {/* Coordinates on last point */}
       {sketchPoints.length > 0 && (
-        <Html
-          position={[
-            sketchPoints[sketchPoints.length - 1].x,
-            1,
-            sketchPoints[sketchPoints.length - 1].y,
-          ]}
-          center
-        >
-          <div className="bg-editor-surface/90 text-editor-accent text-[9px] px-1 py-0.5 rounded border border-editor-border font-mono">
-            ({sketchPoints[sketchPoints.length - 1].x},{' '}
-            {sketchPoints[sketchPoints.length - 1].y})
+        <Html position={to3D(sketchPoints[sketchPoints.length - 1])} center>
+          <div className="bg-fusion-surface/90 text-fusion-blue text-[9px] px-1 py-0.5 rounded border border-fusion-border-light font-mono">
+            ({sketchPoints[sketchPoints.length - 1].x}, {sketchPoints[sketchPoints.length - 1].y})
           </div>
         </Html>
       )}
@@ -259,7 +243,7 @@ function SketchOverlay() {
 }
 
 // ────────────────────────────────────────────
-// Measure tool (distance between two clicked points)
+// Measure overlay
 // ────────────────────────────────────────────
 function MeasureOverlay() {
   const [points, setPoints] = React.useState<THREE.Vector3[]>([]);
@@ -272,7 +256,7 @@ function MeasureOverlay() {
       const rect = canvas.getBoundingClientRect();
       const mouse = new THREE.Vector2(
         ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -((e.clientY - rect.top) / rect.height) * 2 + 1
+        -((e.clientY - rect.top) / rect.height) * 2 + 1,
       );
       raycaster.setFromCamera(mouse, camera);
       const hit = new THREE.Vector3();
@@ -317,7 +301,7 @@ function MeasureOverlay() {
         </mesh>
       ))}
       <Html position={[mid.x, mid.y + 2, mid.z]} center>
-        <div className="bg-editor-surface/90 text-yellow-400 text-[10px] px-1.5 py-0.5 rounded border border-yellow-500/30 font-mono">
+        <div className="bg-fusion-surface/90 text-yellow-400 text-[10px] px-1.5 py-0.5 rounded border border-yellow-500/30 font-mono">
           {dist.toFixed(2)} mm
         </div>
       </Html>
@@ -326,55 +310,45 @@ function MeasureOverlay() {
 }
 
 // ────────────────────────────────────────────
-// Keyboard shortcuts hook
+// Keyboard shortcuts
 // ────────────────────────────────────────────
 function useKeyboardShortcuts() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Ignore if typing in an input
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      )
-        return;
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       const store = useEditorStore.getState();
+
+      // If sketch is active, route sketch-specific shortcuts
+      if (store.isSketchActive) {
+        switch (e.key.toLowerCase()) {
+          case 'l': store.setSketchTool('line'); return;
+          case 'r': store.setSketchTool('rectangle'); return;
+          case 'c': store.setSketchTool('circle'); return;
+          case 'a': store.setSketchTool('arc3point'); return;
+          case 'escape': store.cancelSketch(); return;
+        }
+        return;
+      }
+
       switch (e.key.toLowerCase()) {
-        case 'v':
-          store.setTool('select');
-          break;
-        case 'g':
-          store.setTool('move');
-          break;
-        case 'r':
-          store.setTool('rotate');
-          break;
+        case 'v': store.setTool('select'); break;
+        case 'g': store.setTool('move'); break;
+        case 'r': store.setTool('rotate'); break;
         case 's':
           if (!e.ctrlKey && !e.metaKey) store.setTool('scale');
           break;
-        case 'k':
-          store.setTool('sketch');
-          break;
-        case 'e':
-          store.setTool('extrude');
-          break;
-        case 'f':
-          store.setTool('fillet');
-          break;
-        case 'b':
-          store.setTool('boolean');
-          break;
-        case 'm':
-          store.setTool('measure');
-          break;
+        case 'e': store.openFeatureDialog('extrude'); break;
+        case 'f': store.openFeatureDialog('fillet'); break;
+        case 'b': store.openFeatureDialog('boolean'); break;
+        case 'm': store.setTool('measure'); break;
         case 'escape':
           store.clearSelection();
           store.setTool('select');
-          store.clearSketch();
+          store.closeFeatureDialog();
           break;
         case 'delete':
         case 'backspace':
-          // Delete selected entities
           if (store.selectedIds.length > 0) {
             store.selectedIds.forEach((id) => store.removeEntity(id));
             store.clearSelection();
@@ -388,6 +362,34 @@ function useKeyboardShortcuts() {
 }
 
 // ────────────────────────────────────────────
+// Reference planes (shown when toggled)
+// ────────────────────────────────────────────
+function ReferencePlanes() {
+  const showPlanes = useEditorStore((s) => s.showPlanes);
+  if (!showPlanes) return null;
+
+  return (
+    <>
+      {/* XY – blue */}
+      <mesh position={[0, 0, 0]}>
+        <planeGeometry args={[60, 60]} />
+        <meshBasicMaterial color="#60a5fa" transparent opacity={0.06} side={THREE.DoubleSide} />
+      </mesh>
+      {/* XZ – green */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[60, 60]} />
+        <meshBasicMaterial color="#4ade80" transparent opacity={0.06} side={THREE.DoubleSide} />
+      </mesh>
+      {/* YZ – red */}
+      <mesh rotation={[0, Math.PI / 2, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[60, 60]} />
+        <meshBasicMaterial color="#f87171" transparent opacity={0.06} side={THREE.DoubleSide} />
+      </mesh>
+    </>
+  );
+}
+
+// ────────────────────────────────────────────
 // Main viewport canvas
 // ────────────────────────────────────────────
 function ViewportCanvas() {
@@ -395,11 +397,11 @@ function ViewportCanvas() {
   const selectedIds = useEditorStore((s) => s.selectedIds);
   const showGrid = useEditorStore((s) => s.showGrid);
   const showAxes = useEditorStore((s) => s.showAxes);
+  const isSketchActive = useEditorStore((s) => s.isSketchActive);
   const activeTool = useEditorStore((s) => s.activeTool);
 
   useKeyboardShortcuts();
 
-  const isSketchMode = activeTool === 'sketch';
   const isMeasureMode = activeTool === 'measure';
 
   return (
@@ -407,23 +409,20 @@ function ViewportCanvas() {
       camera={{ position: [30, 25, 30], fov: 50, near: 0.1, far: 10000 }}
       style={{ width: '100%', height: '100%' }}
       gl={{ antialias: true, alpha: false }}
-      onCreated={({ gl }) => {
-        gl.setClearColor('#1e1e2e');
-      }}
+      onCreated={({ gl }) => { gl.setClearColor('#444444'); }}
       onPointerMissed={() => {
-        // Click on empty space → deselect
-        if (!isSketchMode && !isMeasureMode) {
+        if (!isSketchActive && !isMeasureMode) {
           useEditorStore.getState().clearSelection();
         }
       }}
     >
       {/* Lighting */}
       <ambientLight intensity={0.5} />
-      <hemisphereLight args={['#b0c4ff', '#3a3a5a', 0.6]} />
+      <hemisphereLight args={['#c0c8d8', '#4a4a4a', 0.6]} />
       <directionalLight position={[10, 20, 10]} intensity={0.8} castShadow />
       <directionalLight position={[-5, 10, -5]} intensity={0.3} />
 
-      {/* Camera controls — disabled during transforms */}
+      {/* Camera controls */}
       <OrbitControls
         makeDefault
         enableDamping
@@ -431,7 +430,7 @@ function ViewportCanvas() {
         rotateSpeed={0.5}
         panSpeed={0.5}
         zoomSpeed={1.2}
-        enabled={!isSketchMode}
+        enabled={!isSketchActive}
       />
 
       {/* Grid */}
@@ -440,19 +439,19 @@ function ViewportCanvas() {
           args={[200, 200]}
           cellSize={1}
           cellThickness={0.5}
-          cellColor="#3a3a5a"
+          cellColor="#505050"
           sectionSize={10}
           sectionThickness={1}
-          sectionColor="#4a4a6a"
+          sectionColor="#606060"
           fadeDistance={100}
           fadeStrength={1}
           followCamera={false}
         />
       )}
 
-      {/* Axis gizmo */}
+      {/* Axis gizmo (Onshape-style ViewCube position) */}
       {showAxes && (
-        <GizmoHelper alignment="bottom-right" margin={[80, 80]}>
+        <GizmoHelper alignment="top-right" margin={[80, 80]}>
           <GizmoViewport
             axisColors={['#f87171', '#4ade80', '#60a5fa']}
             labelColor="white"
@@ -460,10 +459,13 @@ function ViewportCanvas() {
         </GizmoHelper>
       )}
 
-      {/* Ground reference axes */}
+      {/* Reference axes */}
       <Line points={[[-100, 0, 0], [100, 0, 0]]} color="#f87171" lineWidth={1} transparent opacity={0.3} />
       <Line points={[[0, 0, -100], [0, 0, 100]]} color="#60a5fa" lineWidth={1} transparent opacity={0.3} />
       <Line points={[[0, -100, 0], [0, 100, 0]]} color="#4ade80" lineWidth={1} transparent opacity={0.15} />
+
+      {/* Reference planes */}
+      <ReferencePlanes />
 
       {/* Entities */}
       {entities.map((entity, idx) => (
@@ -475,13 +477,15 @@ function ViewportCanvas() {
           position={entity.transform?.position ?? [idx * 25, 10, 0]}
           rotation={entity.transform?.rotation ?? [0, 0, 0]}
           scale={entity.transform?.scale ?? [1, 1, 1]}
+          entityType={entity.type}
+          suppressed={entity.suppressed}
         />
       ))}
 
-      {/* Sketch mode overlay */}
-      {isSketchMode && <SketchOverlay />}
+      {/* Sketch overlay */}
+      {isSketchActive && <SketchOverlay />}
 
-      {/* Measure mode overlay */}
+      {/* Measure overlay */}
       {isMeasureMode && <MeasureOverlay />}
     </Canvas>
   );
