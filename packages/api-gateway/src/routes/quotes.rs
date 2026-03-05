@@ -73,23 +73,24 @@ async fn generate_quote(
     let total_cost = unit_cost * req.quantity as f64;
 
     // Store quote in DB
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO quotes (id, org_id, user_id, upload_id, material_id, quantity, unit_cost, total_cost, lead_time_days)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         "#,
-        quote_id,
-        auth.org_id,
-        auth.user_id,
-        req.upload_id,
-        req.material_id,
-        req.quantity as i32,
-        unit_cost,
-        total_cost,
-        5i32,
     )
+    .bind(quote_id)
+    .bind(auth.org_id)
+    .bind(auth.user_id)
+    .bind(req.upload_id)
+    .bind(&req.material_id)
+    .bind(req.quantity as i32)
+    .bind(unit_cost)
+    .bind(total_cost)
+    .bind(5i32)
     .execute(&state.db)
-    .await?;
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     Ok(Json(QuoteResponse {
         id: quote_id,

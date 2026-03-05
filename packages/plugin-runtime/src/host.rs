@@ -42,14 +42,19 @@ impl PluginHost {
         // Host functions available to plugins
         linker.func_wrap("env", "log", |mut caller: Caller<'_, PluginState>, ptr: i32, len: i32| {
             if let Some(memory) = caller.get_export("memory").and_then(|e| e.into_memory()) {
-                let data = memory.data(&caller);
                 let start = ptr as usize;
                 let end = start + len as usize;
-                if end <= data.len() {
-                    if let Ok(msg) = std::str::from_utf8(&data[start..end]) {
-                        caller.data_mut().log_buffer.push(msg.to_string());
-                        info!(target: "plugin", "{}", msg);
+                let msg_string = {
+                    let data = memory.data(&caller);
+                    if end <= data.len() {
+                        std::str::from_utf8(&data[start..end]).ok().map(|s| s.to_string())
+                    } else {
+                        None
                     }
+                };
+                if let Some(msg) = msg_string {
+                    caller.data_mut().log_buffer.push(msg.clone());
+                    info!(target: "plugin", "{}", msg);
                 }
             }
         })?;

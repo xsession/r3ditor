@@ -125,7 +125,7 @@ pub fn export_file(
 ) -> Result<String, String> {
     let uuid = Uuid::parse_str(&entity_id).map_err(|e| e.to_string())?;
     let file_format = match format.as_str() {
-        "stl" => shared_types::geometry::FileFormat::StlBinary,
+        "stl" => shared_types::geometry::FileFormat::Stl,
         "step" => shared_types::geometry::FileFormat::Step,
         "obj" => shared_types::geometry::FileFormat::Obj,
         "gltf" => shared_types::geometry::FileFormat::Gltf,
@@ -179,20 +179,20 @@ pub fn analyze_dfm(state: State<AppState>, entity_id: String) -> Result<DfmResul
         .as_ref()
         .ok_or("Entity mesh not tessellated")?;
 
-    let analyzer = dfm_analyzer::DfmAnalyzer::default();
+    let analyzer = dfm_analyzer::DfmAnalyzer::new(dfm_analyzer::analyzer::DfmConfig::default());
     let report = analyzer.analyze(mesh);
 
     Ok(DfmResult {
         findings_count: report.findings.len(),
-        score: report.overall_score,
+        score: report.score,
         findings: report
             .findings
             .iter()
             .map(|f| DfmFindingInfo {
                 severity: format!("{:?}", f.severity),
                 category: format!("{:?}", f.category),
-                message: f.message.clone(),
-                suggestion: f.suggestion.clone(),
+                message: f.title.clone(),
+                suggestion: f.recommendation.clone(),
             })
             .collect(),
     })

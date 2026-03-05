@@ -47,21 +47,22 @@ async fn create_job(
     let job_id = Uuid::new_v4();
     let now = chrono::Utc::now();
 
-    sqlx::query!(
+    sqlx::query(
         r#"
         INSERT INTO jobs (id, org_id, user_id, upload_id, job_type, parameters, status, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, 'queued', $7)
         "#,
-        job_id,
-        auth.org_id,
-        auth.user_id,
-        req.upload_id,
-        req.job_type,
-        req.parameters,
-        now,
     )
+    .bind(job_id)
+    .bind(auth.org_id)
+    .bind(auth.user_id)
+    .bind(req.upload_id)
+    .bind(&req.job_type)
+    .bind(&req.parameters)
+    .bind(now)
     .execute(&state.db)
-    .await?;
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?;
 
     // TODO: Publish to Redis stream for worker processing
 
@@ -80,27 +81,28 @@ async fn get_job(
     auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<JobResponse>, ApiError> {
-    let job = sqlx::query_as!(
-        JobRow,
+    let row = sqlx::query(
         r#"
         SELECT id, upload_id, job_type, status, result, created_at
         FROM jobs
         WHERE id = $1 AND org_id = $2
         "#,
-        id,
-        auth.org_id,
     )
+    .bind(id)
+    .bind(auth.org_id)
     .fetch_optional(&state.db)
-    .await?
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
     .ok_or_else(|| ApiError::NotFound(format!("Job {} not found", id)))?;
 
+    use sqlx::Row;
     Ok(Json(JobResponse {
-        id: job.id,
-        upload_id: job.upload_id,
-        job_type: job.job_type,
-        status: job.status,
-        result: job.result,
-        created_at: job.created_at,
+        id: row.get("id"),
+        upload_id: row.get("upload_id"),
+        job_type: row.get("job_type"),
+        status: row.get("status"),
+        result: row.get("result"),
+        created_at: row.get("created_at"),
     }))
 }
 
@@ -120,11 +122,11 @@ async fn job_events(
         loop {
             tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
-            let status = sqlx::query_scalar!(
+            let status: Result<Option<String>, _> = sqlx::query_scalar(
                 "SELECT status FROM jobs WHERE id = $1 AND org_id = $2",
-                id,
-                auth.org_id,
             )
+            .bind(id)
+            .bind(auth.org_id)
             .fetch_optional(&state.db)
             .await;
 

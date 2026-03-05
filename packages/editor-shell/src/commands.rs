@@ -100,16 +100,19 @@ impl EditorCommand {
             }
 
             EditorCommand::ApplyFeature { entity_id, feature } => {
+                let mut entity_name = String::new();
                 if let Some(entity) = world.get_mut(entity_id) {
                     if let Some(ref mut model) = entity.model {
                         operations::execute_feature(model, &feature)?;
                         entity.feature_tree.push(feature.clone());
-
-                        world.history.execute(Command::new(
-                            format!("Apply {} to {}", feature.type_name(), entity.name),
-                            feature,
-                        ));
+                        entity_name = entity.name.clone();
                     }
+                }
+                if !entity_name.is_empty() {
+                    world.history.execute(Command::new(
+                        format!("Apply {} to {}", feature.type_name(), entity_name),
+                        feature,
+                    ));
                 }
                 Ok(())
             }

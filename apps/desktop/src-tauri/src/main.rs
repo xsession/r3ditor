@@ -10,7 +10,6 @@
 
 use editor_shell::EditorApp;
 use std::sync::Mutex;
-use tauri::State;
 
 mod commands;
 
@@ -20,7 +19,9 @@ pub struct AppState {
 }
 
 fn main() {
+    // Initialize tracing — use stderr so it does not interfere with stdout
     tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
         .with_max_level(tracing::Level::INFO)
         .init();
 
@@ -30,7 +31,9 @@ fn main() {
         editor: Mutex::new(EditorApp::new()),
     };
 
-    tauri::Builder::default()
+    tracing::info!("Building Tauri application...");
+
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -48,7 +51,16 @@ fn main() {
             commands::analyze_dfm,
             commands::get_materials,
             commands::estimate_cost,
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running r3ditor");
+        ]);
+
+    tracing::info!("Running Tauri event loop...");
+
+    match builder.run(tauri::generate_context!()) {
+        Ok(()) => tracing::info!("r3ditor shut down cleanly"),
+        Err(e) => {
+            tracing::error!("r3ditor failed to start: {:#}", e);
+            eprintln!("ERROR: r3ditor failed to start: {:#}", e);
+            std::process::exit(1);
+        }
+    }
 }

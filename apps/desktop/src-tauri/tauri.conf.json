@@ -1,17 +1,17 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicegui/nicegui/main/.schemas/tauri-v2.schema.json",
+  "$schema": "./gen/schemas/desktop-schema.json",
   "productName": "r3ditor",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "com.r3ditor.app",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5173",
     "beforeDevCommand": "cd .. && npm run dev",
     "beforeBuildCommand": "cd .. && npm run build"
   },
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "r3ditor — CAD/CAM Editor",
         "width": 1600,
         "height": 900,
@@ -19,26 +19,56 @@
         "minHeight": 600,
         "resizable": true,
         "decorations": true,
-        "transparent": false
+        "transparent": false,
+        "visible": true,
+        "center": true,
+        "focus": true
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; img-src 'self' data: blob: asset: https://asset.localhost; font-src 'self' data:; connect-src ipc: http://ipc.localhost 'self'; worker-src 'self' blob:"
     }
   },
-  "plugins": {
-    "store": {},
-    "dialog": {
-      "all": true
-    },
-    "fs": {
-      "scope": {
-        "allow": ["$APPDATA/**", "$DOCUMENT/**", "$DOWNLOAD/**"],
-        "deny": []
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico",
+      "icons/icon.png"
+    ],
+    "resources": [],
+    "copyright": "© 2026 r3ditor — MIT OR Apache-2.0",
+    "category": "DeveloperTool",
+    "shortDescription": "Open-Source CAD/CAM Editor",
+    "longDescription": "r3ditor is an open-source CAD/CAM editor featuring a B-Rep kernel, GPU-accelerated rendering, DFM analysis, and toolpath generation.",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "wix": null,
+      "nsis": {
+        "displayLanguageSelector": true,
+        "installerIcon": "icons/icon.ico",
+        "headerImage": null,
+        "sidebarImage": null
       }
     },
-    "shell": {
-      "open": true
+    "linux": {
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"],
+        "section": "science",
+        "priority": "optional"
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      },
+      "rpm": {
+        "release": "1"
+      }
     }
-  }
+  },
+  "plugins": {}
 }

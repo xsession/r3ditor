@@ -25,8 +25,7 @@ impl GpuContext {
                 compatible_surface: None,
                 force_fallback_adapter: false,
             })
-            .await
-            .ok_or_else(|| anyhow::anyhow!("No suitable GPU adapter found"))?;
+            .await?;
 
         let adapter_info = adapter.get_info();
         info!(
@@ -41,8 +40,8 @@ impl GpuContext {
                     required_features: wgpu::Features::empty(),
                     required_limits: wgpu::Limits::default(),
                     memory_hints: wgpu::MemoryHints::Performance,
+                    ..Default::default()
                 },
-                None,
             )
             .await?;
 

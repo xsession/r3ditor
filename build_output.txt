@@ -1,0 +1,20 @@
+﻿cargo :    Compiling tauri v2.10.3
+At line:1 char:96
++ ... -pc-windows-msvc\bin;$env:Path"; cargo check --workspace 2>&1 | Out-F ...
++                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling tauri v2.10.3:String 
+   ) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Checking cad-kernel v0.2.0 (C:\GIT\WORK\codelayer\r3ditor\packages\cad-kern
+el)
+    Checking unicode-normalization v0.1.25
+    Checking tao v0.34.6
+    Checking cranelift-bforest v0.115.1
+    Checking regalloc2 v0.11.2
+    Checking hashbrown v0.14.5
+    Checking keyboard-types v0.7.0
+    Checking hmac v0.12.1
+    Checking avif-serialize v0.8.8
+    Checking tokio-util v0.7.18
+    Checking zune-inflate v0.2.54

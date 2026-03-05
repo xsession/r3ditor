@@ -32,8 +32,8 @@ rayon = "1.10"
 # ─── Web Framework ───
 axum = { version = "0.7", features = ["multipart"] }
 axum-extra = "0.9"
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace", "fs", "compression-gzip"] }
 
 # ─── Serialization ───
 serde = { version = "1", features = ["derive"] }
@@ -41,8 +41,8 @@ serde_json = "1"
 bincode = "1"
 
 # ─── Database ───
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
-redis = { version = "0.25", features = ["tokio-comp", "streams"] }
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
+redis = { version = "0.27", features = ["tokio-comp", "streams", "connection-manager"] }
 
 # ─── Storage ───
 aws-sdk-s3 = "1"
@@ -58,22 +58,22 @@ nalgebra = { version = "0.33", features = ["rayon"] }
 nalgebra-sparse = "0.10"
 
 # ─── Geometry (Truck CAD Kernel) ───
-truck-base = "0.6"
-truck-geotrait = "0.6"
-truck-geometry = "0.6"
+truck-base = "0.5"
+truck-geotrait = "0.4"
+truck-geometry = "0.5"
 truck-topology = "0.6"
 truck-modeling = "0.6"
-truck-shapeops = "0.6"
-truck-meshalgo = "0.6"
+truck-shapeops = "0.4"
+truck-meshalgo = "0.4"
 truck-polymesh = "0.6"
 truck-platform = "0.6"
 truck-rendimpl = "0.6"
-truck-stepio = "0.6"
+truck-stepio = "0.3"
 
 # ─── UI ───
-egui = "0.31"
-egui-wgpu = "0.31"
-egui-winit = "0.31"
+egui = "0.33"
+egui-wgpu = "0.33"
+egui-winit = "0.33"
 winit = "0.30"
 
 # ─── Plugin Runtime ───
@@ -94,8 +94,8 @@ metrics = "0.24"
 metrics-exporter-prometheus = "0.16"
 
 # ─── API Documentation ───
-utoipa = { version = "4", features = ["axum_extras", "chrono"] }
-utoipa-swagger-ui = { version = "6", features = ["axum"] }
+utoipa = { version = "5", features = ["axum_extras", "chrono"] }
+utoipa-swagger-ui = { version = "8", features = ["axum"] }
 
 # ─── Utilities ───
 uuid = { version = "1", features = ["v4", "serde"] }
@@ -103,7 +103,7 @@ chrono = { version = "0.4", features = ["serde"] }
 sha2 = "0.10"
 hex = "0.4"
 anyhow = "1"
-thiserror = "1"
+thiserror = "2"
 image = "0.25"
 bytemuck = { version = "1", features = ["derive"] }
 

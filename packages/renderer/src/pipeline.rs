@@ -24,13 +24,13 @@ pub fn create_pbr_pipeline(
 ) -> wgpu::RenderPipeline {
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("PBR Shader"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("../../shaders/pbr.wgsl").into()),
+        source: wgpu::ShaderSource::Wgsl(include_str!("../../../shaders/pbr.wgsl").into()),
     });
 
     let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("PBR Pipeline Layout"),
         bind_group_layouts: &[camera_bind_group_layout, object_bind_group_layout],
-        push_constant_ranges: &[],
+        ..Default::default()
     });
 
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -73,7 +73,7 @@ pub fn create_pbr_pipeline(
             mask: !0,
             alpha_to_coverage_enabled: false,
         },
-        multiview: None,
+        multiview_mask: None,
         cache: None,
     })
 }

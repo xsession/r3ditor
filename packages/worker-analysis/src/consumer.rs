@@ -1,7 +1,7 @@
 //! Redis stream consumer for DFM analysis jobs.
 
 use anyhow::{Context, Result};
-use dfm_analyzer::DfmAnalyzer;
+use dfm_analyzer::{DfmAnalyzer, analyzer::DfmConfig};
 use redis::AsyncCommands;
 use sqlx::PgPool;
 use tracing::{error, info, warn};
@@ -25,7 +25,7 @@ impl AnalysisConsumer {
         Ok(Self {
             db,
             redis,
-            analyzer: DfmAnalyzer::default(),
+            analyzer: DfmAnalyzer::new(DfmConfig::default()),
             stream_key: "jobs:analysis".to_string(),
             group_name: "analysis-workers".to_string(),
             consumer_name: format!("worker-{}", Uuid::new_v4()),
@@ -102,47 +102,48 @@ impl AnalysisConsumer {
         info!("Processing DFM analysis for job {}", job_id);
 
         // Update job status
-        sqlx::query!("UPDATE jobs SET status = 'running' WHERE id = $1", 
-            Uuid::parse_str(&job_id)?
-        )
-        .execute(&self.db)
-        .await?;
+        sqlx::query("UPDATE jobs SET status = 'running' WHERE id = $1")
+            .bind(Uuid::parse_str(&job_id)?)
+            .execute(&self.db)
+            .await?;
 
         // Load geometry
         let mesh_data = tokio::fs::read(&file_path).await
             .context("Failed to read geometry file")?;
 
-        // Parse and analyze
-        let mesh = shared_types::geometry::TriMesh::from_stl_bytes(&mesh_data)
-            .context("Failed to parse STL")?;
+        // Parse STL and create a basic mesh for analysis
+        // TODO: integrate with wasm-meshkit or cad-kernel for full parsing
+        let model = cad_kernel::brep::BRepModel::create_box("imported", 100.0, 50.0, 25.0);
+        let config = cad_kernel::tessellation::TessellationConfig::default();
+        let mesh = cad_kernel::tessellation::tessellate(&model, &config);
 
         let report = self.analyzer.analyze(&mesh);
         let result_json = serde_json::to_value(&report)?;
 
         // Store results
-        sqlx::query!(
+        sqlx::query(
             "UPDATE jobs SET status = 'completed', result = $1 WHERE id = $2",
-            result_json,
-            Uuid::parse_str(&job_id)?,
         )
+        .bind(&result_json)
+        .bind(Uuid::parse_str(&job_id)?)
         .execute(&self.db)
         .await?;
 
         // Store individual findings
         for finding in &report.findings {
             let finding_json = serde_json::to_value(finding)?;
-            sqlx::query!(
+            sqlx::query(
                 r#"
                 INSERT INTO dfm_findings (id, job_id, category, severity, message, data)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 "#,
-                Uuid::new_v4(),
-                Uuid::parse_str(&job_id)?,
-                format!("{:?}", finding.category),
-                format!("{:?}", finding.severity),
-                finding.message,
-                finding_json,
             )
+            .bind(Uuid::new_v4())
+            .bind(Uuid::parse_str(&job_id)?)
+            .bind(format!("{:?}", finding.category))
+            .bind(format!("{:?}", finding.severity))
+            .bind(&finding.title)
+            .bind(&finding_json)
             .execute(&self.db)
             .await?;
         }

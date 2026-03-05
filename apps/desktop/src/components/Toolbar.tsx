@@ -40,35 +40,63 @@ export function Toolbar() {
   const { activeTool, setTool, canUndo, canRedo } = useEditorStore();
 
   const handleCreateBox = async () => {
-    await api.createBox('Box', 20, 20, 20);
-    const entities = await api.getEntities();
-    useEditorStore.getState().setEntities(
-      entities.map((e) => ({
-        id: e.id,
-        name: e.name,
-        visible: e.visible,
-        locked: e.locked,
-        faceCount: e.face_count,
-        edgeCount: e.edge_count,
-        vertexCount: e.vertex_count,
-      }))
-    );
+    try {
+      await api.createBox('Box', 20, 20, 20);
+      const entities = await api.getEntities();
+      const existing = useEditorStore.getState().entities;
+      useEditorStore.getState().setEntities(
+        entities.map((e, idx) => {
+          const prev = existing.find((ex) => ex.id === e.id);
+          return {
+            id: e.id,
+            name: e.name,
+            visible: e.visible,
+            locked: e.locked,
+            faceCount: e.face_count,
+            edgeCount: e.edge_count,
+            vertexCount: e.vertex_count,
+            transform: prev?.transform ?? {
+              position: [idx * 25, 10, 0] as [number, number, number],
+              rotation: [0, 0, 0] as [number, number, number],
+              scale: [1, 1, 1] as [number, number, number],
+            },
+          };
+        })
+      );
+      useEditorStore.getState().setStatusMessage('Created Box');
+    } catch (err) {
+      useEditorStore.getState().setStatusMessage(`Error: ${err}`);
+    }
   };
 
   const handleCreateCylinder = async () => {
-    await api.createCylinder('Cylinder', 10, 30);
-    const entities = await api.getEntities();
-    useEditorStore.getState().setEntities(
-      entities.map((e) => ({
-        id: e.id,
-        name: e.name,
-        visible: e.visible,
-        locked: e.locked,
-        faceCount: e.face_count,
-        edgeCount: e.edge_count,
-        vertexCount: e.vertex_count,
-      }))
-    );
+    try {
+      await api.createCylinder('Cylinder', 10, 30);
+      const entities = await api.getEntities();
+      const existing = useEditorStore.getState().entities;
+      useEditorStore.getState().setEntities(
+        entities.map((e, idx) => {
+          const prev = existing.find((ex) => ex.id === e.id);
+          return {
+            id: e.id,
+            name: e.name,
+            visible: e.visible,
+            locked: e.locked,
+            faceCount: e.face_count,
+            edgeCount: e.edge_count,
+            vertexCount: e.vertex_count,
+            transform: prev?.transform ?? {
+              position: [idx * 25, 10, 0] as [number, number, number],
+              rotation: [0, 0, 0] as [number, number, number],
+              scale: [1, 1, 1] as [number, number, number],
+            },
+          };
+        })
+      );
+      useEditorStore.getState().setStatusMessage('Created Cylinder');
+    } catch (err) {
+      useEditorStore.getState().setStatusMessage(`Error: ${err}`);
+    }
   };
 
   return (

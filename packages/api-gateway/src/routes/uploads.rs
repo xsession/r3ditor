@@ -59,20 +59,21 @@ async fn create_upload(
         })?;
 
         // Record in database
-        sqlx::query!(
+        sqlx::query(
             r#"
             INSERT INTO uploads (id, org_id, user_id, filename, size_bytes, file_path, status)
             VALUES ($1, $2, $3, $4, $5, $6, 'pending')
             "#,
-            upload_id,
-            auth.org_id,
-            auth.user_id,
-            filename,
-            size as i64,
-            file_path,
         )
+        .bind(upload_id)
+        .bind(auth.org_id)
+        .bind(auth.user_id)
+        .bind(&filename)
+        .bind(size as i64)
+        .bind(&file_path)
         .execute(&state.db)
-        .await?;
+        .await
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
 
         // TODO: Publish to Redis stream for worker processing
 
@@ -92,25 +93,26 @@ async fn get_upload(
     auth: AuthUser,
     Path(id): Path<Uuid>,
 ) -> Result<Json<UploadResponse>, ApiError> {
-    let upload = sqlx::query_as!(
-        UploadRow,
+    let row = sqlx::query(
         r#"
         SELECT id, filename, size_bytes, status
         FROM uploads
         WHERE id = $1 AND org_id = $2
         "#,
-        id,
-        auth.org_id,
     )
+    .bind(id)
+    .bind(auth.org_id)
     .fetch_optional(&state.db)
-    .await?
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
     .ok_or_else(|| ApiError::NotFound(format!("Upload {} not found", id)))?;
 
+    use sqlx::Row;
     Ok(Json(UploadResponse {
-        id: upload.id,
-        filename: upload.filename,
-        size_bytes: upload.size_bytes as u64,
-        status: upload.status,
+        id: row.get("id"),
+        filename: row.get("filename"),
+        size_bytes: row.get::<i64, _>("size_bytes") as u64,
+        status: row.get("status"),
     }))
 }
 

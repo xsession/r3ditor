@@ -4,9 +4,10 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use cad_kernel::brep::BRepModel;
 use cad_kernel::tessellation::{self, TessellationConfig};
-use cam_engine::cnc;
-use cam_engine::nesting::{NestingPart, Sheet, rectangular_nest};
+use cam_engine::cnc::{self, CncParams};
+use cam_engine::nesting::{rectangular_nest, NestingPart, NestingSheet};
 use constraint_solver::solver2d::SketchSolver;
+use constraint_solver::types::SolverConfig;
 use dfm_analyzer::DfmAnalyzer;
 use shared_types::materials;
 
@@ -27,8 +28,8 @@ fn bench_tessellation(c: &mut Criterion) {
 fn bench_constraint_solver(c: &mut Criterion) {
     c.bench_function("solve_10_point_sketch", |b| {
         b.iter(|| {
-            let mut solver = SketchSolver::new();
-            // Add 10 points with distance and horizontal/vertical constraints
+            let mut solver = SketchSolver::new(SolverConfig::default());
+            // Add 10 points with distance constraints
             for i in 0..10 {
                 solver.add_point(i as f64 * 10.0 + 0.5, i as f64 * 5.0 + 0.3);
             }
@@ -47,33 +48,32 @@ fn bench_constraint_solver(c: &mut Criterion) {
 }
 
 fn bench_cnc_estimation(c: &mut Criterion) {
-    let materials = materials::default_cnc_materials();
-    let aluminum = &materials[0]; // 6061-T6
+    let cnc_materials = materials::default_cnc_materials();
+    let aluminum = &cnc_materials[0]; // 6061-T6
 
     c.bench_function("kienzle_cutting_force", |b| {
+        let params = CncParams::default();
         b.iter(|| {
-            cnc::kienzle_cutting_force(
-                black_box(aluminum.specific_cutting_force),
-                black_box(2.0),
-                black_box(0.15),
-                black_box(aluminum.mc_exponent),
-            )
+            cnc::kienzle_cutting_force(black_box(aluminum), black_box(&params))
         })
     });
 
     c.bench_function("cnc_full_estimation", |b| {
+        let params = CncParams {
+            depth_of_cut: 2.0,
+            feed_per_tooth: 0.15,
+            cutting_speed: 200.0,
+            num_flutes: 3,
+            tool_diameter: 10.0,
+            nose_radius: 0.4,
+            spindle_efficiency: 0.85,
+            max_spindle_power: 15.0,
+            material_volume_cm3: 50.0 * 30.0 * 20.0 * 0.3 / 1000.0,
+            machine_rate_cents_per_hour: 8500,
+            setup_time_min: 30.0,
+        };
         b.iter(|| {
-            let params = cnc::CncParams {
-                material: aluminum.clone(),
-                tool_diameter: 10.0,
-                depth_of_cut: 2.0,
-                width_of_cut: 5.0,
-                feed_per_tooth: 0.15,
-                num_flutes: 3,
-                spindle_speed_override: None,
-            };
-            let volume = 50.0 * 30.0 * 20.0 * 0.3; // 30% MRR
-            black_box(cnc::estimate_cnc(&params, volume))
+            black_box(cnc::estimate_cnc(black_box(aluminum), black_box(&params)))
         })
     });
 }
@@ -82,21 +82,23 @@ fn bench_nesting(c: &mut Criterion) {
     c.bench_function("nest_20_parts_on_sheet", |b| {
         let parts: Vec<NestingPart> = (0..20)
             .map(|i| NestingPart {
-                id: format!("part_{}", i),
-                width: 30.0 + (i as f64 % 5.0) * 10.0,
-                height: 20.0 + (i as f64 % 3.0) * 8.0,
+                id: uuid::Uuid::new_v4(),
+                width_mm: 30.0 + (i as f64 % 5.0) * 10.0,
+                height_mm: 20.0 + (i as f64 % 3.0) * 8.0,
                 quantity: 1,
-                can_rotate: true,
+                allow_rotation: true,
+                outline: None,
             })
             .collect();
 
-        let sheet = Sheet {
-            width: 1000.0,
-            height: 500.0,
-            material_id: "steel".to_string(),
+        let sheet = NestingSheet {
+            width_mm: 1000.0,
+            height_mm: 500.0,
+            margin_mm: 5.0,
+            spacing_mm: 3.0,
         };
 
-        b.iter(|| black_box(rectangular_nest(black_box(&parts), black_box(&sheet), 3.0)))
+        b.iter(|| black_box(rectangular_nest(black_box(&parts), black_box(&sheet))))
     });
 }
 

@@ -17,15 +17,17 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 anyhow = { workspace = true }
 axum = { workspace = true }
-tower = "0.5"
-tower-http = { version = "0.6", features = ["cors", "trace", "compression-gzip"] }
-utoipa = { version = "5", features = ["axum_extras"] }
-utoipa-swagger-ui = { version = "8", features = ["axum"] }
+tower = { workspace = true }
+tower-http = { workspace = true }
+utoipa = { workspace = true }
+utoipa-swagger-ui = { workspace = true }
+thiserror = { workspace = true }
+sqlx = { workspace = true }
+redis = { workspace = true }
 jsonwebtoken = "9"
 bcrypt = "0.16"
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono"] }
-redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true }
 mime = "0.3"
 bytes = "1"
-thiserror = "2"
+futures = "0.3"
+async-stream = "0.3"

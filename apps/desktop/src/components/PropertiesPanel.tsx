@@ -35,9 +35,9 @@ export function PropertiesPanel() {
                 <h3 className="text-xs font-semibold text-editor-muted uppercase mb-2">
                   Transform
                 </h3>
-                <PropertyRow label="Position" value="0, 0, 0" />
-                <PropertyRow label="Rotation" value="0°, 0°, 0°" />
-                <PropertyRow label="Scale" value="1, 1, 1" />
+                <PropertyRow label="Position" value={entity.transform ? entity.transform.position.map((v) => v.toFixed(1)).join(', ') : '0, 0, 0'} />
+                <PropertyRow label="Rotation" value={entity.transform ? entity.transform.rotation.map((v) => `${(v * 180 / Math.PI).toFixed(1)}°`).join(', ') : '0°, 0°, 0°'} />
+                <PropertyRow label="Scale" value={entity.transform ? entity.transform.scale.map((v) => v.toFixed(2)).join(', ') : '1, 1, 1'} />
               </div>
 
               <div className="border-t border-editor-border pt-2 mt-2">

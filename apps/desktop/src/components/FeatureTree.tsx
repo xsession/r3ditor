@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Lock, Unlock, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { useEditorStore } from '../store/editorStore';
 import * as api from '../api/tauri';
 import clsx from 'clsx';

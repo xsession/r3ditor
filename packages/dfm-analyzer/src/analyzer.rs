@@ -91,7 +91,7 @@ fn calculate_score(findings: &[DfmFinding]) -> f64 {
         return 100.0;
     }
 
-    let mut deductions = 0.0;
+    let mut deductions: f64 = 0.0;
     for finding in findings {
         match finding.severity {
             DfmSeverity::Critical => deductions += 30.0,

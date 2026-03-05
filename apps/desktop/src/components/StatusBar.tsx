@@ -1,9 +1,9 @@
 import { useEditorStore } from '../store/editorStore';
-import { Grid3x3, Axis3D } from 'lucide-react';
+import { LayoutGrid, Move3d } from 'lucide-react';
 import clsx from 'clsx';
 
 export function StatusBar() {
-  const { entities, selectedIds, activeTool, showGrid, showAxes, toggleGrid, toggleAxes } =
+  const { entities, selectedIds, activeTool, showGrid, showAxes, toggleGrid, toggleAxes, statusMessage, sketchPoints } =
     useEditorStore();
 
   return (
@@ -32,7 +32,7 @@ export function StatusBar() {
         title="Toggle Grid"
         onClick={toggleGrid}
       >
-        <Grid3x3 size={14} />
+        <LayoutGrid size={14} />
       </button>
       <button
         className={clsx(
@@ -42,13 +42,22 @@ export function StatusBar() {
         title="Toggle Axes"
         onClick={toggleAxes}
       >
-        <Axis3D size={14} />
+        <Move3d size={14} />
       </button>
 
       <span className="w-px h-3 bg-editor-border" />
+      {activeTool === 'sketch' && (
+        <>
+          <span className="w-px h-3 bg-editor-border" />
+          <span>Sketch points: <strong className="text-editor-accent">{sketchPoints.length}</strong></span>
+        </>
+      )}
+      <span className="w-px h-3 bg-editor-border" />
+      <span className="text-editor-muted truncate max-w-[200px]">{statusMessage}</span>
+      <span className="w-px h-3 bg-editor-border" />
       <span>Units: mm</span>
       <span className="w-px h-3 bg-editor-border" />
-      <span>r3ditor v0.1.0</span>
+      <span>r3ditor v0.2.0</span>
     </div>
   );
 }

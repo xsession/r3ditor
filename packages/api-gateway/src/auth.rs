@@ -52,25 +52,37 @@ where
 {
     type Rejection = StatusCode;
 
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let auth_header = parts
-            .headers
-            .get(header::AUTHORIZATION)
-            .and_then(|v| v.to_str().ok())
-            .ok_or(StatusCode::UNAUTHORIZED)?;
+    fn from_request_parts<'life0, 'life1, 'async_trait>(
+        parts: &'life0 mut Parts,
+        _state: &'life1 S,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<Self, Self::Rejection>> + Send + 'async_trait>,
+    >
+    where
+        Self: 'async_trait,
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+    {
+        Box::pin(async move {
+            let auth_header = parts
+                .headers
+                .get(header::AUTHORIZATION)
+                .and_then(|v| v.to_str().ok())
+                .ok_or(StatusCode::UNAUTHORIZED)?;
 
-        let token = auth_header
-            .strip_prefix("Bearer ")
-            .ok_or(StatusCode::UNAUTHORIZED)?;
+            let token = auth_header
+                .strip_prefix("Bearer ")
+                .ok_or(StatusCode::UNAUTHORIZED)?;
 
-        // TODO: get secret from state instead of hardcoded
-        let claims =
-            verify_token(token, "secret").map_err(|_| StatusCode::UNAUTHORIZED)?;
+            // TODO: get secret from state instead of hardcoded
+            let claims =
+                verify_token(token, "secret").map_err(|_| StatusCode::UNAUTHORIZED)?;
 
-        Ok(AuthUser {
-            user_id: claims.sub,
-            org_id: claims.org,
-            role: claims.role,
+            Ok(AuthUser {
+                user_id: claims.sub,
+                org_id: claims.org,
+                role: claims.role,
+            })
         })
     }
 }
