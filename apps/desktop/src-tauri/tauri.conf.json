@@ -6,8 +6,8 @@
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "npm run dev --prefix c:/GIT/WORK/codelayer/r3ditor/apps/desktop",
-    "beforeBuildCommand": "npm run build --prefix c:/GIT/WORK/codelayer/r3ditor/apps/desktop"
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [
