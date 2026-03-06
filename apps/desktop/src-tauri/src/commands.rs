@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use uuid::Uuid;
 
+use cad_kernel::tessellation;
 use editor_shell::commands::EditorCommand;
 
 /// Entity info returned to the frontend
@@ -80,9 +81,9 @@ pub fn get_entities(state: State<AppState>) -> Result<Vec<EntityInfo>, String> {
             name: e.name.clone(),
             visible: e.visible,
             locked: e.locked,
-            face_count: e.model.as_ref().map(|m| m.face_count()).unwrap_or(0),
-            edge_count: e.model.as_ref().map(|m| m.edge_count()).unwrap_or(0),
-            vertex_count: e.model.as_ref().map(|m| m.vertex_count()).unwrap_or(0),
+            face_count: e.brep.as_ref().map(|m| m.face_count()).unwrap_or(0),
+            edge_count: e.brep.as_ref().map(|m| m.edge_count()).unwrap_or(0),
+            vertex_count: e.brep.as_ref().map(|m| m.vertex_count()).unwrap_or(0),
         })
         .collect();
     Ok(entities)
@@ -169,12 +170,7 @@ pub fn analyze_dfm(state: State<AppState>, entity_id: String) -> Result<DfmResul
         .get(uuid)
         .ok_or_else(|| format!("Entity {} not found", entity_id))?;
 
-    let model = entity
-        .model
-        .as_ref()
-        .ok_or("Entity has no model")?;
-
-    let mesh = model
+    let mesh = entity
         .mesh
         .as_ref()
         .ok_or("Entity mesh not tessellated")?;
@@ -239,4 +235,41 @@ pub fn estimate_cost(
         machine_time_min: 12.5,
         material_cost: 8.0,
     })
+}
+
+/// Export all visible entities as a combined binary STL file.
+#[tauri::command]
+pub fn export_all_stl(state: State<AppState>, path: String) -> Result<String, String> {
+    let editor = state.editor.lock().map_err(|e| e.to_string())?;
+
+    let meshes: Vec<&shared_types::geometry::TriMesh> = editor
+        .world
+        .entities
+        .iter()
+        .filter(|e| e.visible)
+        .filter_map(|e| e.mesh.as_ref())
+        .collect();
+
+    if meshes.is_empty() {
+        return Err("No visible entities with mesh data to export".to_string());
+    }
+
+    let mesh_refs: Vec<&shared_types::geometry::TriMesh> = meshes.iter().copied().collect();
+    let merged = tessellation::merge_meshes(&mesh_refs);
+
+    tessellation::export_stl(&merged, &path).map_err(|e| format!("STL export failed: {}", e))?;
+
+    let tri_count = merged.triangle_count();
+    tracing::info!(
+        "Exported {} entities ({} triangles) as binary STL → {}",
+        meshes.len(),
+        tri_count,
+        path
+    );
+
+    Ok(format!(
+        "Exported {} triangles from {} entities",
+        tri_count,
+        meshes.len()
+    ))
 }

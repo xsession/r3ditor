@@ -83,6 +83,10 @@ export async function exportFile(
   return invoke('export_file', { entityId, path, format });
 }
 
+export async function exportAllStl(path: string): Promise<string> {
+  return invoke('export_all_stl', { path });
+}
+
 // -- Analysis --
 
 export async function analyzeDfm(entityId: string): Promise<DfmResult> {

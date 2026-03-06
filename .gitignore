@@ -32,6 +32,10 @@ Thumbs.db
 *.wasm
 *.d.ts
 
+# Generated output (callicat models, STL exports)
+apps/desktop/output/
+apps/desktop/generated_test_models/
+
 # Docker
 docker-compose.override.yml
 

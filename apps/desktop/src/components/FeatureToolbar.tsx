@@ -106,12 +106,32 @@ export function FeatureToolbar() {
   const {
     workspaceMode, fusionWorkspace, setFusionWorkspace,
     isSketchActive, activeTool, setTool,
-    activeSketchTool, setSketchTool, startSketch, finishSketch, cancelSketch,
-    openFeatureDialog,
+    activeSketchTool, setSketchTool, finishSketch, cancelSketch,
+    openFeatureDialog, beginPlaneSelection, sketchPhase,
   } = useEditorStore();
 
   // ── SKETCH MODE toolbar (Fusion 360 Sketch Palette style) ──
   if (isSketchActive) {
+    // Phase 1: plane selection — show minimal bar with cancel only
+    if (sketchPhase === 'selectPlane') {
+      return (
+        <div className="flex flex-col bg-fusion-toolbar border-b border-fusion-border select-none">
+          <div className="flex items-center gap-0.5 px-2 py-1 border-b border-fusion-border">
+            <span className="text-[10px] font-bold text-fusion-orange tracking-wider mr-3">SKETCH — SELECT PLANE</span>
+            <div className="flex-1" />
+            <span className="text-[10px] text-fusion-text-secondary mr-3">Click a reference plane or a face on an object</span>
+            <button
+              className="px-3 py-1 text-xs font-medium rounded bg-fusion-surface hover:bg-fusion-surface-hover text-fusion-text-secondary border border-fusion-border-light"
+              onClick={cancelSketch}
+            >
+              ✕ Cancel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Phase 2: drawing — full sketch toolbar
     return (
       <div className="flex flex-col bg-fusion-toolbar border-b border-fusion-border select-none">
         {/* Sketch header bar */}
@@ -212,7 +232,7 @@ export function FeatureToolbar() {
         {/* Row 2: Tool menus + tool ribbon */}
         <div className="flex items-center gap-0.5 px-1 py-1">
           {/* Sketch button (always visible) */}
-          <ToolBtn icon={Pencil} label="Create Sketch (S)" accent onClick={() => startSketch('XY')} />
+          <ToolBtn icon={Pencil} label="Create Sketch (S)" accent onClick={() => beginPlaneSelection()} />
           <ToolSep />
 
           {/* Dropdown menus */}

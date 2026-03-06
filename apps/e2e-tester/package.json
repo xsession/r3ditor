@@ -1,0 +1,19 @@
+{
+  "name": "r3ditor-e2e-tester",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "External E2E tester — simulates a human user designing a callicat in r3ditor",
+  "scripts": {
+    "test": "npx playwright test",
+    "test:headed": "npx playwright test --headed",
+    "test:debug": "npx playwright test --debug",
+    "test:ui": "npx playwright test --ui",
+    "start-server": "cd ../desktop && npx vite --host",
+    "callicat": "npx playwright test tests/callicat-design.spec.ts --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "typescript": "^5.6.0"
+  }
+}

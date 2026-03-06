@@ -5,8 +5,9 @@
   "identifier": "com.r3ditor.app",
   "build": {
     "frontendDist": "../dist",
-    "beforeDevCommand": "cd .. && npm run dev",
-    "beforeBuildCommand": "cd .. && npm run build"
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev --prefix c:/GIT/WORK/codelayer/r3ditor/apps/desktop",
+    "beforeBuildCommand": "npm run build --prefix c:/GIT/WORK/codelayer/r3ditor/apps/desktop"
   },
   "app": {
     "windows": [

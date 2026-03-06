@@ -1,5 +1,6 @@
 import { X, Check, ChevronDown } from 'lucide-react';
 import { useEditorStore, type FeatureTool } from '../store/editorStore';
+import { ExpressionInput } from './ExpressionInput';
 
 /**
  * Fusion 360-style feature parameter dialog.
@@ -171,18 +172,12 @@ function ParamNumber({
   label: string; paramKey: string; value: number; update: (k: string, v: unknown) => void; unit?: string;
 }) {
   return (
-    <div className="flex items-center gap-2">
-      <label className="text-xs text-fusion-text-secondary w-24 flex-shrink-0">{label}</label>
-      <div className="flex items-center flex-1 bg-fusion-panel border border-fusion-border-light rounded px-2 py-1 focus-within:border-fusion-blue">
-        <input
-          type="number"
-          className="bg-transparent text-xs text-fusion-text w-full outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          value={value ?? 0}
-          onChange={(e) => update(paramKey, parseFloat(e.target.value) || 0)}
-        />
-        {unit && <span className="text-[10px] text-fusion-text-disabled ml-1">{unit}</span>}
-      </div>
-    </div>
+    <ExpressionInput
+      label={label}
+      value={value ?? 0}
+      onChange={(val) => update(paramKey, val)}
+      unit={unit}
+    />
   );
 }
 

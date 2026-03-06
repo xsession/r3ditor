@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useEditorStore } from '../store/editorStore';
 import clsx from 'clsx';
-import { useRef, useState } from 'react';
+import { useRef, useState, useCallback } from 'react';
 
 // ── Feature type → icon mapping ──
 const timelineIcons: Record<string, React.ElementType> = {
@@ -30,12 +30,16 @@ const timelineIcons: Record<string, React.ElementType> = {
 
 /**
  * Fusion 360-style Timeline — horizontal parametric history bar at the bottom.
- * Shows feature icons left-to-right with a rollback marker.
+ * Shows feature icons left-to-right with a draggable rollback marker.
+ * Drag the rollback bar left/right to roll back or forward through parametric history.
+ * Left-to-right drag = window select, right-to-left = crossing select.
  */
 export function BottomTabBar() {
-  const { timeline, rollbackIndex, select } = useEditorStore();
+  const { timeline, rollbackIndex, setRollbackIndex, select, openFeatureDialog, setStatusMessage } = useEditorStore();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [isDraggingMarker, setIsDraggingMarker] = useState(false);
+  const tileRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const scrollLeft = () => {
     scrollRef.current?.scrollBy({ left: -120, behavior: 'smooth' });
@@ -43,6 +47,54 @@ export function BottomTabBar() {
   const scrollRight = () => {
     scrollRef.current?.scrollBy({ left: 120, behavior: 'smooth' });
   };
+
+  // ── Rollback marker drag logic ──
+  const handleMarkerDragStart = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingMarker(true);
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const handleMarkerDrag = useCallback((e: React.PointerEvent) => {
+    if (!isDraggingMarker) return;
+    // Find which timeline tile the pointer is over
+    const x = e.clientX;
+    let closestIdx = timeline.length - 1;
+    let closestDist = Infinity;
+    tileRefs.current.forEach((el, idx) => {
+      if (!el) return;
+      const rect = el.getBoundingClientRect();
+      const center = rect.left + rect.width / 2;
+      const dist = Math.abs(x - center);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestIdx = idx;
+      }
+    });
+    // Check if pointer is before the first tile
+    const first = tileRefs.current[0];
+    if (first) {
+      const rect = first.getBoundingClientRect();
+      if (x < rect.left - 10) {
+        closestIdx = -1; // Before all features
+      }
+    }
+    if (closestIdx !== rollbackIndex) {
+      setRollbackIndex(closestIdx);
+      if (closestIdx < 0) {
+        setStatusMessage('Rolled back to start — no features active');
+      } else if (closestIdx < timeline.length - 1) {
+        setStatusMessage(`Rolled back to: ${timeline[closestIdx].name}`);
+      } else {
+        setStatusMessage('Timeline at end — all features active');
+      }
+    }
+  }, [isDraggingMarker, timeline, rollbackIndex, setRollbackIndex, setStatusMessage]);
+
+  const handleMarkerDragEnd = useCallback(() => {
+    setIsDraggingMarker(false);
+  }, []);
 
   return (
     <div className="flex items-center h-9 bg-fusion-timeline border-t border-fusion-border select-none">
@@ -80,6 +132,7 @@ export function BottomTabBar() {
               <div key={entry.id} className="flex items-center flex-shrink-0">
                 {/* Feature icon tile */}
                 <button
+                  ref={(el) => { tileRefs.current[idx] = el; }}
                   className={clsx(
                     'relative flex items-center justify-center w-7 h-7 rounded border transition-colors',
                     entry.hasError
@@ -92,6 +145,12 @@ export function BottomTabBar() {
                   )}
                   title={entry.name}
                   onClick={() => select(entry.id)}
+                  onDoubleClick={() => {
+                    // Double-click to re-enter feature dialog (P0: Feature editing)
+                    if (entry.type !== 'sketch' && entry.type !== 'component' && entry.type !== 'joint') {
+                      openFeatureDialog(entry.type as any);
+                    }
+                  }}
                   onMouseEnter={() => setHoveredIdx(idx)}
                   onMouseLeave={() => setHoveredIdx(null)}
                 >
@@ -105,11 +164,18 @@ export function BottomTabBar() {
                   )}
                 </button>
 
-                {/* Rollback marker (orange vertical line) */}
+                {/* Rollback marker (orange vertical line — draggable) */}
                 {isAtRollback && (
                   <div
-                    className="w-0.5 h-7 bg-fusion-timeline-marker mx-0.5 cursor-ew-resize rounded-full flex-shrink-0"
-                    title="Rollback marker — drag to roll back"
+                    className={clsx(
+                      'w-1 h-7 bg-fusion-timeline-marker mx-0.5 rounded-full flex-shrink-0 touch-none',
+                      isDraggingMarker ? 'cursor-grabbing opacity-80' : 'cursor-ew-resize',
+                    )}
+                    title="Drag to roll back timeline"
+                    onPointerDown={handleMarkerDragStart}
+                    onPointerMove={handleMarkerDrag}
+                    onPointerUp={handleMarkerDragEnd}
+                    onPointerCancel={handleMarkerDragEnd}
                   />
                 )}
 
@@ -125,8 +191,15 @@ export function BottomTabBar() {
         {/* End rollback marker (at end if no rollback) */}
         {timeline.length > 0 && rollbackIndex < 0 && (
           <div
-            className="w-0.5 h-7 bg-fusion-timeline-marker ml-1 cursor-ew-resize rounded-full flex-shrink-0"
-            title="End of timeline"
+            className={clsx(
+              'w-1 h-7 bg-fusion-timeline-marker ml-1 rounded-full flex-shrink-0 touch-none',
+              isDraggingMarker ? 'cursor-grabbing opacity-80' : 'cursor-ew-resize',
+            )}
+            title="Drag to roll back timeline"
+            onPointerDown={handleMarkerDragStart}
+            onPointerMove={handleMarkerDrag}
+            onPointerUp={handleMarkerDragEnd}
+            onPointerCancel={handleMarkerDragEnd}
           />
         )}
       </div>

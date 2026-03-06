@@ -16,16 +16,16 @@ pub fn draw_editor_ui(ctx: &egui::Context, app: &mut EditorApp) {
             // File menu
             ui.menu_button("File", |ui| {
                 if ui.button("New Project").clicked() {
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui.button("Open...").clicked() {
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui.button("Save").clicked() {
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui.button("Export...").clicked() {
-                    ui.close_menu();
+                    ui.close();
                 }
             });
 
@@ -33,11 +33,11 @@ pub fn draw_editor_ui(ctx: &egui::Context, app: &mut EditorApp) {
             ui.menu_button("Edit", |ui| {
                 if ui.button("Undo (Ctrl+Z)").clicked() {
                     app.execute_command(EditorCommand::Undo);
-                    ui.close_menu();
+                    ui.close();
                 }
                 if ui.button("Redo (Ctrl+Y)").clicked() {
                     app.execute_command(EditorCommand::Redo);
-                    ui.close_menu();
+                    ui.close();
                 }
             });
 
@@ -73,10 +73,10 @@ pub fn draw_editor_ui(ctx: &egui::Context, app: &mut EditorApp) {
                     if let Some(entity) = app.world.get(id) {
                         ui.label(format!("Name: {}", entity.name));
                         ui.label(format!("Visible: {}", entity.visible));
-                        if let Some(ref model) = entity.model {
-                            ui.label(format!("Faces: {}", model.face_count()));
-                            ui.label(format!("Edges: {}", model.edge_count()));
-                            ui.label(format!("Vertices: {}", model.vertex_count()));
+                        if let Some(ref brep) = entity.brep {
+                            ui.label(format!("Faces: {}", brep.face_count()));
+                            ui.label(format!("Edges: {}", brep.edge_count()));
+                            ui.label(format!("Vertices: {}", brep.vertex_count()));
                         }
                         ui.separator();
                     }
@@ -129,8 +129,8 @@ pub fn draw_editor_ui(ctx: &egui::Context, app: &mut EditorApp) {
 
                 // Show feature tree items
                 for feature in entity.feature_tree.active_features() {
-                    ui.indent(feature.id(), |ui| {
-                        ui.label(format!("  ├─ {}", feature.type_name()));
+                    ui.indent(feature.id, |ui| {
+                        ui.label(format!("  ├─ {}", feature.name));
                     });
                 }
             }

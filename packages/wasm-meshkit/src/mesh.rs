@@ -148,3 +148,160 @@ impl WasmMesh {
         self.indices.extend_from_slice(&[a, b, c]);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_triangle_mesh() -> WasmMesh {
+        let mut mesh = WasmMesh::new();
+        mesh.add_vertex(Vec3::new(0.0, 0.0, 0.0), Vec3::Z);
+        mesh.add_vertex(Vec3::new(1.0, 0.0, 0.0), Vec3::Z);
+        mesh.add_vertex(Vec3::new(0.0, 1.0, 0.0), Vec3::Z);
+        mesh.add_triangle(0, 1, 2);
+        mesh
+    }
+
+    fn make_cube_mesh() -> WasmMesh {
+        let mut mesh = WasmMesh::new();
+        // 8 vertices of a unit cube
+        let verts = [
+            Vec3::new(0.0, 0.0, 0.0), Vec3::new(1.0, 0.0, 0.0),
+            Vec3::new(1.0, 1.0, 0.0), Vec3::new(0.0, 1.0, 0.0),
+            Vec3::new(0.0, 0.0, 1.0), Vec3::new(1.0, 0.0, 1.0),
+            Vec3::new(1.0, 1.0, 1.0), Vec3::new(0.0, 1.0, 1.0),
+        ];
+        for v in &verts {
+            mesh.add_vertex(*v, Vec3::Z);
+        }
+        // 12 triangles (2 per face × 6 faces)
+        let tris: [(u32, u32, u32); 12] = [
+            (0,1,2), (0,2,3), // bottom
+            (4,6,5), (4,7,6), // top
+            (0,5,1), (0,4,5), // front
+            (2,7,3), (2,6,7), // back
+            (0,3,7), (0,7,4), // left
+            (1,5,6), (1,6,2), // right
+        ];
+        for (a, b, c) in &tris {
+            mesh.add_triangle(*a, *b, *c);
+        }
+        mesh
+    }
+
+    #[test]
+    fn test_new_mesh_empty() {
+        let mesh = WasmMesh::new();
+        assert_eq!(mesh.vertex_count(), 0);
+        assert_eq!(mesh.triangle_count(), 0);
+    }
+
+    #[test]
+    fn test_add_vertex() {
+        let mut mesh = WasmMesh::new();
+        let idx = mesh.add_vertex(Vec3::new(1.0, 2.0, 3.0), Vec3::Z);
+        assert_eq!(idx, 0);
+        assert_eq!(mesh.vertex_count(), 1);
+        assert_eq!(mesh.positions.len(), 3);
+        assert_eq!(mesh.normals.len(), 3);
+    }
+
+    #[test]
+    fn test_add_triangle() {
+        let mesh = make_triangle_mesh();
+        assert_eq!(mesh.vertex_count(), 3);
+        assert_eq!(mesh.triangle_count(), 1);
+        assert_eq!(mesh.indices, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn test_get_vertex() {
+        let mesh = make_triangle_mesh();
+        assert_eq!(mesh.get_vertex(0), Vec3::new(0.0, 0.0, 0.0));
+        assert_eq!(mesh.get_vertex(1), Vec3::new(1.0, 0.0, 0.0));
+        assert_eq!(mesh.get_vertex(2), Vec3::new(0.0, 1.0, 0.0));
+    }
+
+    #[test]
+    fn test_bounding_box_empty() {
+        let mesh = WasmMesh::new();
+        let bbox = mesh.bounding_box();
+        assert_eq!(bbox.len(), 6);
+        assert_eq!(bbox, vec![0.0; 6]);
+    }
+
+    #[test]
+    fn test_bounding_box_triangle() {
+        let mesh = make_triangle_mesh();
+        let bbox = mesh.bounding_box();
+        assert_eq!(bbox[0], 0.0); // min_x
+        assert_eq!(bbox[1], 0.0); // min_y
+        assert_eq!(bbox[2], 0.0); // min_z
+        assert_eq!(bbox[3], 1.0); // max_x
+        assert_eq!(bbox[4], 1.0); // max_y
+        assert_eq!(bbox[5], 0.0); // max_z
+    }
+
+    #[test]
+    fn test_bounding_box_cube() {
+        let mesh = make_cube_mesh();
+        let bbox = mesh.bounding_box();
+        assert!((bbox[0] - 0.0).abs() < 1e-5);
+        assert!((bbox[1] - 0.0).abs() < 1e-5);
+        assert!((bbox[2] - 0.0).abs() < 1e-5);
+        assert!((bbox[3] - 1.0).abs() < 1e-5);
+        assert!((bbox[4] - 1.0).abs() < 1e-5);
+        assert!((bbox[5] - 1.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_volume_cube() {
+        let mesh = make_cube_mesh();
+        let vol = mesh.volume();
+        // Volume of unit cube should be ~1.0
+        assert!((vol - 1.0).abs() < 0.1, "Cube volume should be ~1.0, got {}", vol);
+    }
+
+    #[test]
+    fn test_get_positions() {
+        let mesh = make_triangle_mesh();
+        let positions = mesh.get_positions();
+        assert_eq!(positions.len(), 9); // 3 vertices × 3 components
+        assert_eq!(positions[0], 0.0); // first vertex x
+        assert_eq!(positions[3], 1.0); // second vertex x
+    }
+
+    #[test]
+    fn test_get_normals() {
+        let mesh = make_triangle_mesh();
+        let normals = mesh.get_normals();
+        assert_eq!(normals.len(), 9); // 3 vertices × 3 components
+    }
+
+    #[test]
+    fn test_get_indices() {
+        let mesh = make_triangle_mesh();
+        let indices = mesh.get_indices();
+        assert_eq!(indices, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn test_recompute_normals() {
+        let mut mesh = make_triangle_mesh();
+        mesh.normals = vec![0.0; 9]; // zero out normals
+        mesh.recompute_normals();
+        // After recomputation, normals for the flat triangle should point in +Z or -Z
+        let n0 = Vec3::new(mesh.normals[0], mesh.normals[1], mesh.normals[2]);
+        assert!(n0.length() > 0.9, "Normal should be approximately unit length");
+        assert!((n0.z.abs() - 1.0).abs() < 0.01, "Normal should be along Z axis");
+    }
+
+    #[test]
+    fn test_clone() {
+        let mesh = make_triangle_mesh();
+        let cloned = mesh.clone();
+        assert_eq!(cloned.vertex_count(), mesh.vertex_count());
+        assert_eq!(cloned.triangle_count(), mesh.triangle_count());
+        assert_eq!(cloned.positions, mesh.positions);
+    }
+}

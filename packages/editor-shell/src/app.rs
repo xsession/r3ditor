@@ -1,6 +1,5 @@
 //! Main application entry point and event loop.
 
-use anyhow::Result;
 use tracing::info;
 use uuid::Uuid;
 
@@ -106,5 +105,109 @@ impl EditorApp {
 impl Default for EditorApp {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_editor_app_new() {
+        let app = EditorApp::new();
+        assert!(app.running);
+        assert_eq!(app.active_tool, Tool::Select);
+        assert!(app.selection.is_empty());
+        assert!(app.world.entities.is_empty());
+    }
+
+    #[test]
+    fn test_set_tool() {
+        let mut app = EditorApp::new();
+        app.set_tool(Tool::Extrude);
+        assert_eq!(app.active_tool, Tool::Extrude);
+        app.set_tool(Tool::Sketch);
+        assert_eq!(app.active_tool, Tool::Sketch);
+    }
+
+    #[test]
+    fn test_select_entity() {
+        let mut app = EditorApp::new();
+        let id = Uuid::new_v4();
+        app.select(id);
+        assert_eq!(app.selection.len(), 1);
+        assert_eq!(app.selection[0], id);
+    }
+
+    #[test]
+    fn test_select_no_duplicates() {
+        let mut app = EditorApp::new();
+        let id = Uuid::new_v4();
+        app.select(id);
+        app.select(id);
+        assert_eq!(app.selection.len(), 1);
+    }
+
+    #[test]
+    fn test_clear_selection() {
+        let mut app = EditorApp::new();
+        app.select(Uuid::new_v4());
+        app.select(Uuid::new_v4());
+        app.clear_selection();
+        assert!(app.selection.is_empty());
+    }
+
+    #[test]
+    fn test_execute_command_creates_entity() {
+        let mut app = EditorApp::new();
+        app.execute_command(EditorCommand::CreateBox {
+            name: "TestBox".into(),
+            width: 10.0,
+            height: 10.0,
+            depth: 10.0,
+        });
+        app.update();
+        assert_eq!(app.world.entities.len(), 1);
+        assert_eq!(app.world.entities[0].name, "TestBox");
+    }
+
+    #[test]
+    fn test_execute_command_create_cylinder() {
+        let mut app = EditorApp::new();
+        app.execute_command(EditorCommand::CreateCylinder {
+            name: "TestCyl".into(),
+            radius: 5.0,
+            height: 20.0,
+        });
+        app.update();
+        assert_eq!(app.world.entities.len(), 1);
+        assert_eq!(app.world.entities[0].name, "TestCyl");
+    }
+
+    #[test]
+    fn test_execute_command_delete_entity() {
+        let mut app = EditorApp::new();
+        app.execute_command(EditorCommand::CreateBox {
+            name: "ToDelete".into(),
+            width: 5.0,
+            height: 5.0,
+            depth: 5.0,
+        });
+        app.update();
+        let id = app.world.entities[0].id;
+        app.execute_command(EditorCommand::DeleteEntity { entity_id: id });
+        app.update();
+        assert!(app.world.entities.is_empty());
+    }
+
+    #[test]
+    fn test_tool_variants() {
+        let tools = vec![
+            Tool::Select, Tool::Move, Tool::Rotate, Tool::Scale,
+            Tool::Sketch, Tool::Extrude, Tool::Revolve,
+            Tool::Fillet, Tool::Chamfer, Tool::Boolean,
+            Tool::Measure, Tool::Section,
+        ];
+        assert_eq!(tools.len(), 12);
     }
 }

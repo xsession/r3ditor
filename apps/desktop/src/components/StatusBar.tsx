@@ -1,10 +1,11 @@
 import { useEditorStore } from '../store/editorStore';
 import {
   Orbit, Hand, ZoomIn, Maximize,
-  Eye, Settings, Grid3x3, Magnet, ChevronDown,
+  Eye, Settings, Grid3x3, Magnet, ChevronDown, Box,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useState, useRef, useEffect } from 'react';
+import { NavigationStylePicker } from './NavigationStylePicker';
 
 /**
  * Fusion 360-style Navigation Bar — positioned at the bottom center.
@@ -15,6 +16,8 @@ export function StatusBar() {
     showGrid, showAxes, toggleGrid, toggleAxes,
     statusMessage, isSketchActive, sketchDof,
     viewStyle, setViewStyle,
+    cameraProjection, toggleCameraProjection,
+    navigationStyle, setNavigationStyle,
   } = useEditorStore();
 
   return (
@@ -57,6 +60,28 @@ export function StatusBar() {
         toggleGrid={toggleGrid}
         toggleAxes={toggleAxes}
       />
+
+      <NavSep />
+
+      {/* Navigation style picker */}
+      <NavigationStylePicker value={navigationStyle} onChange={setNavigationStyle} />
+
+      <NavSep />
+
+      {/* Camera projection toggle */}
+      <button
+        className={clsx(
+          'flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] transition-colors',
+          cameraProjection === 'orthographic'
+            ? 'text-fusion-blue bg-fusion-blue/10'
+            : 'text-fusion-text-disabled hover:text-fusion-text-secondary',
+        )}
+        onClick={toggleCameraProjection}
+        title={`Camera: ${cameraProjection} (Shift+5 to toggle)`}
+      >
+        <Box size={10} />
+        <span>{cameraProjection === 'perspective' ? 'Persp' : 'Ortho'}</span>
+      </button>
 
       <NavSep />
 

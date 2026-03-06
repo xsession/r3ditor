@@ -1,6 +1,6 @@
 //! Input handling — keyboard, mouse, touch events.
 
-use winit::event::{ElementState, KeyEvent, MouseButton, MouseScrollDelta};
+use winit::event::{ElementState, KeyEvent, MouseScrollDelta};
 use winit::keyboard::{Key, NamedKey};
 
 use crate::app::{EditorApp, Tool};
@@ -14,7 +14,7 @@ pub fn handle_key_event(app: &mut EditorApp, event: &KeyEvent) {
 
     // Check for modifier keys
     let ctrl = false; // TODO: track modifier state
-    let shift = false;
+    let _shift = false;
 
     match &event.logical_key {
         // Tool shortcuts
@@ -69,7 +69,7 @@ pub fn handle_mouse_motion(
     app: &mut EditorApp,
     delta_x: f64,
     delta_y: f64,
-    left_button: bool,
+    _left_button: bool,
     middle_button: bool,
     right_button: bool,
     shift: bool,

@@ -1,0 +1,122 @@
+        Info `tauri` dependency has workspace inheritance enabled. The features array won't be automatically rewritten. Expected features: []
+     Running BeforeDevCommand (`npm run dev --prefix c:/GIT/WORK/codelayer/r3ditor/apps/desktop`)
+     Running DevCommand (`cargo  run --no-default-features --color always --`)
+[1m[93mwarning[0m[1m[97m: unused import: `warn`[0m
+  [1m[96m--> [0mpackages\cad-kernel\src\operations.rs:24:28
+   [1m[96m|[0m
+[1m[96m24[0m [1m[96m|[0m use tracing::{debug, info, warn};
+   [1m[96m|[0m                            [1m[93m^^^^[0m
+   [1m[96m|[0m
+   [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m: `cad-kernel` (lib) generated 1 warning (run `cargo fix --lib -p cad-kernel` to apply 1 suggestion)
+[1m[93mwarning[0m[1m[97m: variable does not need to be mutable[0m
+  [1m[96m--> [0mpackages\dfm-analyzer\src\checks.rs:57:9
+   [1m[96m|[0m
+[1m[96m57[0m [1m[96m|[0m     let mut findings = Vec::new();
+   [1m[96m|[0m         [1m[96m----[0m[1m[93m^^^^^^^^[0m
+   [1m[96m|[0m         [1m[96m|[0m
+   [1m[96m|[0m         [1m[96mhelp: remove this `mut`[0m
+   [1m[96m|[0m
+   [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m[1m[97m: unused variable: `mesh`[0m
+  [1m[96m--> [0mpackages\dfm-analyzer\src\checks.rs:54:5
+   [1m[96m|[0m
+[1m[96m54[0m [1m[96m|[0m     mesh: &TriMesh,
+   [1m[96m|[0m     [1m[93m^^^^[0m [1m[93mhelp: if this is intentional, prefix it with an underscore: `_mesh`[0m
+   [1m[96m|[0m
+   [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m[1m[97m: unused variable: `min_radius_mm`[0m
+  [1m[96m--> [0mpackages\dfm-analyzer\src\checks.rs:55:5
+   [1m[96m|[0m
+[1m[96m55[0m [1m[96m|[0m     min_radius_mm: f64,
+   [1m[96m|[0m     [1m[93m^^^^^^^^^^^^^[0m [1m[93mhelp: if this is intentional, prefix it with an underscore: `_min_radius_mm`[0m
+
+[1m[93mwarning[0m[1m[97m: unused import: `ToolpathType`[0m
+ [1m[96m--> [0mpackages\cam-engine\src\gcode.rs:3:74
+  [1m[96m|[0m
+[1m[96m3[0m [1m[96m|[0m use shared_types::manufacturing::{GCodeProgram, PostProcessor, Toolpath, ToolpathType, CoolantType};
+  [1m[96m|[0m                                                                          [1m[93m^^^^^^^^^^^^[0m
+  [1m[96m|[0m
+  [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m[1m[97m: unused imports: `Deserialize` and `Serialize`[0m
+ [1m[96m--> [0mpackages\cam-engine\src\nesting.rs:4:13
+  [1m[96m|[0m
+[1m[96m4[0m [1m[96m|[0m use serde::{Deserialize, Serialize};
+  [1m[96m|[0m             [1m[93m^^^^^^^^^^^[0m  [1m[93m^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: unused import: `rayon::prelude`[0m
+ [1m[96m--> [0mpackages\cam-engine\src\nesting.rs:3:5
+  [1m[96m|[0m
+[1m[96m3[0m [1m[96m|[0m use rayon::prelude::*;
+  [1m[96m|[0m     [1m[93m^^^^^^^^^^^^^^[0m
+
+[1m[93mwarning[0m[1m[97m: unused variable: `rpm`[0m
+   [1m[96m--> [0mpackages\cam-engine\src\cnc.rs:141:9
+    [1m[96m|[0m
+[1m[96m141[0m [1m[96m|[0m     let rpm = spindle_rpm(params.cutting_speed, params.tool_diameter);
+    [1m[96m|[0m         [1m[93m^^^[0m [1m[93mhelp: if this is intentional, prefix it with an underscore: `_rpm`[0m
+    [1m[96m|[0m
+    [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m[1m[97m: unused variable: `post`[0m
+   [1m[96m--> [0mpackages\cam-engine\src\gcode.rs:121:37
+    [1m[96m|[0m
+[1m[96m121[0m [1m[96m|[0m fn write_spindle(code: &mut String, post: PostProcessor, rpm: f64) {
+    [1m[96m|[0m                                     [1m[93m^^^^[0m [1m[93mhelp: if this is intentional, prefix it with an underscore: `_post`[0m
+
+[1m[93mwarning[0m[1m[97m: unused variable: `program_number`[0m
+   [1m[96m--> [0mpackages\cam-engine\src\gcode.rs:138:57
+    [1m[96m|[0m
+[1m[96m138[0m [1m[96m|[0m fn write_footer(code: &mut String, post: PostProcessor, program_number: u32) {
+    [1m[96m|[0m                                                         [1m[93m^^^^^^^^^^^^^^[0m [1m[93mhelp: if this is intentional, prefix it with an underscore: `_program_number`[0m
+
+[1m[93mwarning[0m: `dfm-analyzer` (lib) generated 3 warnings (run `cargo fix --lib -p dfm-analyzer` to apply 3 suggestions)
+[1m[93mwarning[0m: `cam-engine` (lib) generated 6 warnings (run `cargo fix --lib -p cam-engine` to apply 5 suggestions)
+[1m[93mwarning[0m[1m[97m: unused import: `warn`[0m
+ [1m[96m--> [0mpackages\plugin-runtime\src\host.rs:4:21
+  [1m[96m|[0m
+[1m[96m4[0m [1m[96m|[0m use tracing::{info, warn};
+  [1m[96m|[0m                     [1m[93m^^^^[0m
+  [1m[96m|[0m
+  [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m: `plugin-runtime` (lib) generated 1 warning (run `cargo fix --lib -p plugin-runtime` to apply 1 suggestion)
+[1m[93mwarning[0m[1m[97m: unused variable: `state`[0m
+   [1m[96m--> [0mapps\desktop\src-tauri\src\commands.rs:228:5
+    [1m[96m|[0m
+[1m[96m228[0m [1m[96m|[0m     state: State<AppState>,
+    [1m[96m|[0m     [1m[93m^^^^^[0m [1m[93mhelp: if this is intentional, prefix it with an underscore: `_state`[0m
+    [1m[96m|[0m
+    [1m[96m= [0m[1m[97mnote[0m: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m[1m[97m: fields `entity_id`, `material_id`, and `process` are never read[0m
+   [1m[96m--> [0mapps\desktop\src-tauri\src\commands.rs:212:9
+    [1m[96m|[0m
+[1m[96m211[0m [1m[96m|[0m pub struct CostEstimateRequest {
+    [1m[96m|[0m            [1m[96m-------------------[0m [1m[96mfields in this struct[0m
+[1m[96m212[0m [1m[96m|[0m     pub entity_id: String,
+    [1m[96m|[0m         [1m[93m^^^^^^^^^[0m
+[1m[96m213[0m [1m[96m|[0m     pub material_id: String,
+    [1m[96m|[0m         [1m[93m^^^^^^^^^^^[0m
+[1m[96m214[0m [1m[96m|[0m     pub process: String,
+    [1m[96m|[0m         [1m[93m^^^^^^^[0m
+    [1m[96m|[0m
+    [1m[96m= [0m[1m[97mnote[0m: `CostEstimateRequest` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+    [1m[96m= [0m[1m[97mnote[0m: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+[1m[93mwarning[0m: `r3ditor-desktop` (bin "r3ditor-desktop") generated 2 warnings (run `cargo fix --bin "r3ditor-desktop" -p r3ditor-desktop` to apply 1 suggestion)
+[1m[92m    Finished[0m ]8;;https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles\`dev` profile [optimized + debuginfo]]8;;\ target(s) in 2.02s
+[1m[93mwarning[0m: the following packages contain code that will be rejected by a future version of Rust: nom v3.2.1, quick-xml v0.22.0
+[1m[92mnote[0m: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+[1m[92m     Running[0m `C:\GIT\WORK\codelayer\r3ditor\target\debug\r3ditor-desktop.exe`
+[2m2026-03-06T11:39:07.541643Z[0m [32m INFO[0m [2mr3ditor_desktop[0m[2m:[0m Starting r3ditor desktop application...
+[2m2026-03-06T11:39:07.541681Z[0m [32m INFO[0m [2meditor_shell::app[0m[2m:[0m Initializing r3ditor editor...
+[2m2026-03-06T11:39:07.541693Z[0m [32m INFO[0m [2mr3ditor_desktop[0m[2m:[0m Building Tauri application...
+[2m2026-03-06T11:39:07.541801Z[0m [32m INFO[0m [2mr3ditor_desktop[0m[2m:[0m Running Tauri event loop...
+[2m2026-03-06T11:39:07.931180Z[0m [32m INFO[0m [2mr3ditor_desktop[0m[2m:[0m Tauri setup hook running...
+[2m2026-03-06T11:39:07.931222Z[0m [32m INFO[0m [2mr3ditor_desktop[0m[2m:[0m Main window created: "main"
+[2m2026-03-06T11:39:07.931235Z[0m [32m INFO[0m [2mr3ditor_desktop[0m[2m:[0m Setup complete.

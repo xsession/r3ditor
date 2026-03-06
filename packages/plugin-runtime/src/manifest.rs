@@ -92,3 +92,85 @@ impl PluginManifest {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_manifest_test_helper() {
+        let m = PluginManifest::test("My DFM Checker", PluginType::DfmCheck);
+        assert_eq!(m.id, "com.test.my-dfm-checker");
+        assert_eq!(m.name, "My DFM Checker");
+        assert_eq!(m.version, "0.1.0");
+        assert_eq!(m.plugin_type, PluginType::DfmCheck);
+        assert_eq!(m.permissions, vec![Permission::ReadGeometry]);
+    }
+
+    #[test]
+    fn test_manifest_serialization_roundtrip() {
+        let m = PluginManifest::test("Export GLTF", PluginType::Exporter);
+        let json = serde_json::to_string(&m).unwrap();
+        let deserialized: PluginManifest = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.id, m.id);
+        assert_eq!(deserialized.name, m.name);
+        assert_eq!(deserialized.plugin_type, m.plugin_type);
+    }
+
+    #[test]
+    fn test_manifest_deserialization_with_defaults() {
+        let json = r#"{
+            "id": "com.test.minimal",
+            "name": "Minimal",
+            "version": "1.0.0",
+            "author": "Someone",
+            "description": "A minimal plugin",
+            "plugin_type": "DfmCheck"
+        }"#;
+        let m: PluginManifest = serde_json::from_str(json).unwrap();
+        assert_eq!(m.max_memory_mb, 64); // default
+        assert_eq!(m.max_cpu_time_ms, 5000); // default
+        assert_eq!(m.api_version, "0.1.0"); // default
+        assert!(m.permissions.is_empty()); // default
+    }
+
+    #[test]
+    fn test_plugin_type_variants() {
+        let types = vec![
+            PluginType::DfmCheck,
+            PluginType::Material,
+            PluginType::PostProcessor,
+            PluginType::Toolpath,
+            PluginType::Importer,
+            PluginType::Exporter,
+            PluginType::UiPanel,
+        ];
+        assert_eq!(types.len(), 7);
+    }
+
+    #[test]
+    fn test_permission_variants() {
+        let perms = vec![
+            Permission::ReadGeometry,
+            Permission::WriteGeometry,
+            Permission::ReadMaterial,
+            Permission::Network,
+            Permission::FileSystem,
+        ];
+        assert_eq!(perms.len(), 5);
+    }
+
+    #[test]
+    fn test_permission_equality() {
+        assert_eq!(Permission::ReadGeometry, Permission::ReadGeometry);
+        assert_ne!(Permission::ReadGeometry, Permission::WriteGeometry);
+    }
+
+    #[test]
+    fn test_plugin_type_serialization() {
+        let pt = PluginType::PostProcessor;
+        let json = serde_json::to_string(&pt).unwrap();
+        let deserialized: PluginType = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized, pt);
+    }
+}

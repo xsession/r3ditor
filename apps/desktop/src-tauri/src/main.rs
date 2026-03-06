@@ -39,6 +39,17 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .manage(state)
+        .setup(|app| {
+            tracing::info!("Tauri setup hook running...");
+            use tauri::Manager;
+            let window = app.get_webview_window("main");
+            match &window {
+                Some(w) => tracing::info!("Main window created: {:?}", w.label()),
+                None => tracing::warn!("Main window not found!"),
+            }
+            tracing::info!("Setup complete.");
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::create_box,
             commands::create_cylinder,
@@ -51,6 +62,7 @@ fn main() {
             commands::analyze_dfm,
             commands::get_materials,
             commands::estimate_cost,
+            commands::export_all_stl,
         ]);
 
     tracing::info!("Running Tauri event loop...");

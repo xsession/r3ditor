@@ -63,6 +63,25 @@ export type SelectionFilter = 'body' | 'face' | 'edge' | 'vertex' | 'component';
 
 // ── Sketch entities ──
 
+/** Phase of the sketch workflow */
+export type SketchPhase = 'selectPlane' | 'drawing' | null;
+
+/** Plane definition for sketching — either a standard plane or a face on an object */
+export interface SketchPlaneInfo {
+  type: 'XY' | 'XZ' | 'YZ' | 'face';
+  /** World-space origin of the plane */
+  origin: [number, number, number];
+  /** Unit normal of the plane */
+  normal: [number, number, number];
+  /** U-axis (right) in world space */
+  uAxis: [number, number, number];
+  /** V-axis (up) in world space */
+  vAxis: [number, number, number];
+  /** If type === 'face', the entity + face id */
+  entityId?: string;
+  faceIndex?: number;
+}
+
 export interface SketchPoint {
   x: number;
   y: number;
@@ -73,6 +92,7 @@ export interface SketchPoint {
 export interface SketchSegment {
   id: string;
   type: 'line' | 'arc' | 'circle' | 'spline' | 'rectangle';
+  /** For line: [startPtId, endPtId]. For rect: [p0,p1,p2,p3]. For circle: [centerId, edgePtId] */
   points: string[];
   isConstruction: boolean;
 }
@@ -91,6 +111,16 @@ export interface SketchDimension {
   entityIds: string[];
   value: number;
   driving: boolean;
+}
+
+/** Live drawing state for click-drag-release */
+export interface DrawState {
+  /** Is the mouse currently pressed? */
+  active: boolean;
+  /** Start point in sketch-local 2D coords */
+  startPoint: { x: number; y: number } | null;
+  /** Current mouse position in sketch-local 2D coords */
+  currentPoint: { x: number; y: number } | null;
 }
 
 // ── Feature tree / Browser ──
@@ -176,6 +206,35 @@ export interface MarkingMenuState {
   y: number;
 }
 
+// ── Section plane state ──
+
+export interface SectionPlaneState {
+  enabled: boolean;
+  origin: [number, number, number];
+  normal: [number, number, number];
+}
+
+// ── Measure tool state ──
+
+export interface MeasureResult {
+  pointA: [number, number, number] | null;
+  pointB: [number, number, number] | null;
+  distance: number | null;
+  angle: number | null;
+}
+
+// ── Box selection state ──
+
+export interface BoxSelectionState {
+  active: boolean;
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+  /** 'window' = left-to-right (only fully enclosed), 'crossing' = right-to-left (any overlap) */
+  mode: 'window' | 'crossing';
+}
+
 // ── Main store ──
 
 interface EditorState {
@@ -220,12 +279,19 @@ interface EditorState {
 
   // Sketch mode
   isSketchActive: boolean;
+  sketchPhase: SketchPhase;
   activeSketchTool: SketchTool | null;
   sketchPlane: 'XY' | 'XZ' | 'YZ' | 'face' | null;
+  sketchPlaneInfo: SketchPlaneInfo | null;
   sketchPoints: SketchPoint[];
   sketchSegments: SketchSegment[];
   sketchConstraints: SketchConstraint[];
   sketchDimensions: SketchDimension[];
+  drawState: DrawState;
+  /** Enter plane-selection phase (user must click a plane or face) */
+  beginPlaneSelection: () => void;
+  /** Commit a plane choice and transition to drawing phase */
+  selectSketchPlane: (plane: SketchPlaneInfo) => void;
   startSketch: (plane: 'XY' | 'XZ' | 'YZ' | 'face') => void;
   finishSketch: () => void;
   cancelSketch: () => void;
@@ -235,6 +301,7 @@ interface EditorState {
   addSketchConstraint: (constraint: SketchConstraint) => void;
   addSketchDimension: (dim: SketchDimension) => void;
   clearSketch: () => void;
+  setDrawState: (ds: Partial<DrawState>) => void;
   sketchDof: number;
 
   // Browser tree (Fusion 360's "Browser" = left panel with component tree)
@@ -293,6 +360,15 @@ interface EditorState {
   viewStyle: 'shaded' | 'shadedEdges' | 'wireframe' | 'hidden';
   setViewStyle: (style: 'shaded' | 'shadedEdges' | 'wireframe' | 'hidden') => void;
 
+  // Camera projection
+  cameraProjection: 'perspective' | 'orthographic';
+  toggleCameraProjection: () => void;
+  setCameraProjection: (proj: 'perspective' | 'orthographic') => void;
+
+  // Navigation style
+  navigationStyle: string;
+  setNavigationStyle: (style: string) => void;
+
   // Status
   statusMessage: string;
   setStatusMessage: (msg: string) => void;
@@ -310,10 +386,60 @@ interface EditorState {
   // Navigation bar display settings
   displaySettingsOpen: boolean;
   toggleDisplaySettings: () => void;
+
+  // Clipboard for copy/paste
+  clipboard: string[];
+
+  // View commands (consumed by Viewport3D to animate camera)
+  viewCommand: 'zoomFit' | 'front' | 'back' | 'top' | 'bottom' | 'left' | 'right' | 'iso' | null;
+  clearViewCommand: () => void;
+
+  // Command palette
+  commandPaletteOpen: boolean;
+  setCommandPaletteOpen: (open: boolean) => void;
+
+  // Section analysis plane
+  sectionPlane: SectionPlaneState;
+  setSectionPlane: (state: Partial<SectionPlaneState>) => void;
+  toggleSectionPlane: () => void;
+
+  // Measure tool
+  measureResult: MeasureResult;
+  setMeasurePoint: (point: 'A' | 'B', pos: [number, number, number]) => void;
+  clearMeasure: () => void;
+
+  // Box / Window selection
+  boxSelection: BoxSelectionState;
+  startBoxSelection: (x: number, y: number) => void;
+  updateBoxSelection: (x: number, y: number) => void;
+  endBoxSelection: () => void;
+
+  // Auto-constraints (during sketch drawing)
+  autoConstraintsEnabled: boolean;
+  toggleAutoConstraints: () => void;
+
+  // Grid snap
+  gridSnapEnabled: boolean;
+  gridSnapSize: number;
+  toggleGridSnap: () => void;
+  setGridSnapSize: (size: number) => void;
 }
 
 let pointIdCounter = 0;
 const makePointId = () => `pt_${++pointIdCounter}`;
+
+/** Build a SketchPlaneInfo from a named plane ('XY' | 'XZ' | 'YZ') */
+function standardPlaneInfo(plane: 'XY' | 'XZ' | 'YZ' | 'face'): SketchPlaneInfo {
+  switch (plane) {
+    case 'XZ':
+      return { type: 'XZ', origin: [0, 0, 0], normal: [0, 1, 0], uAxis: [1, 0, 0], vAxis: [0, 0, 1] };
+    case 'YZ':
+      return { type: 'YZ', origin: [0, 0, 0], normal: [1, 0, 0], uAxis: [0, 1, 0], vAxis: [0, 0, 1] };
+    case 'XY':
+    default:
+      return { type: 'XY', origin: [0, 0, 0], normal: [0, 0, 1], uAxis: [1, 0, 0], vAxis: [0, 1, 0] };
+  }
+}
 
 // Helper to recursively toggle node expansion
 function toggleNodeInTree(nodes: BrowserNode[], id: string): BrowserNode[] {
@@ -416,17 +542,54 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   // Sketch
   isSketchActive: false,
+  sketchPhase: null,
   activeSketchTool: null,
   sketchPlane: null,
+  sketchPlaneInfo: null,
   sketchPoints: [],
   sketchSegments: [],
   sketchConstraints: [],
   sketchDimensions: [],
   sketchDof: 0,
-  startSketch: (plane) =>
+  drawState: { active: false, startPoint: null, currentPoint: null },
+
+  /** Step 1: user clicked "Create Sketch" — show plane/face selection highlights */
+  beginPlaneSelection: () =>
     set({
       isSketchActive: true,
+      sketchPhase: 'selectPlane',
+      sketchPlane: null,
+      sketchPlaneInfo: null,
+      activeSketchTool: null,
+      activeTool: 'sketch',
+      sketchPoints: [],
+      sketchSegments: [],
+      sketchConstraints: [],
+      sketchDimensions: [],
+      sketchDof: 0,
+      drawState: { active: false, startPoint: null, currentPoint: null },
+      statusMessage: 'Select a plane or face to sketch on…',
+      showPlanes: true, // show reference planes so user can click them
+    }),
+
+  /** Step 2: user picked a plane/face — camera will animate, then enter drawing */
+  selectSketchPlane: (info: SketchPlaneInfo) =>
+    set({
+      sketchPhase: 'drawing',
+      sketchPlane: info.type,
+      sketchPlaneInfo: info,
+      activeSketchTool: 'line',
+      statusMessage: `Sketching on ${info.type} plane — draw with click-drag-release`,
+    }),
+
+  startSketch: (plane) => {
+    // Legacy shortcut — build a SketchPlaneInfo from the named plane and go straight to drawing
+    const info = standardPlaneInfo(plane);
+    set({
+      isSketchActive: true,
+      sketchPhase: 'drawing',
       sketchPlane: plane,
+      sketchPlaneInfo: info,
       activeSketchTool: 'line',
       activeTool: 'sketch',
       sketchPoints: [],
@@ -434,8 +597,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       sketchConstraints: [],
       sketchDimensions: [],
       sketchDof: 0,
+      drawState: { active: false, startPoint: null, currentPoint: null },
       statusMessage: `Sketching on ${plane} plane`,
-    }),
+    });
+  },
   finishSketch: () => {
     const state = get();
     if (state.sketchPoints.length > 0 || state.sketchSegments.length > 0) {
@@ -475,9 +640,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         });
         return {
           isSketchActive: false,
+          sketchPhase: null,
           activeSketchTool: null,
           sketchPlane: null,
+          sketchPlaneInfo: null,
           activeTool: 'select',
+          sketchPoints: [],
+          sketchSegments: [],
+          sketchConstraints: [],
+          sketchDimensions: [],
+          sketchDof: 0,
+          drawState: { active: false, startPoint: null, currentPoint: null },
           browserTree: tree,
           featureTree: tree,
           timeline: [...s.timeline, newEntry],
@@ -487,9 +660,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     } else {
       set({
         isSketchActive: false,
+        sketchPhase: null,
         activeSketchTool: null,
         sketchPlane: null,
+        sketchPlaneInfo: null,
         activeTool: 'select',
+        sketchPoints: [],
+        sketchSegments: [],
+        sketchConstraints: [],
+        sketchDimensions: [],
+        sketchDof: 0,
+        drawState: { active: false, startPoint: null, currentPoint: null },
         statusMessage: 'Sketch cancelled (empty)',
       });
     }
@@ -497,17 +678,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   cancelSketch: () =>
     set({
       isSketchActive: false,
+      sketchPhase: null,
       activeSketchTool: null,
       sketchPlane: null,
+      sketchPlaneInfo: null,
       activeTool: 'select',
       sketchPoints: [],
       sketchSegments: [],
       sketchConstraints: [],
       sketchDimensions: [],
       sketchDof: 0,
+      drawState: { active: false, startPoint: null, currentPoint: null },
       statusMessage: 'Sketch cancelled',
     }),
   setSketchTool: (tool) => set({ activeSketchTool: tool }),
+  setDrawState: (ds) =>
+    set((s) => ({ drawState: { ...s.drawState, ...ds } })),
   addSketchPoint: (pt) =>
     set((s) => {
       const np = { ...pt, id: pt.id || makePointId() };
@@ -684,6 +870,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   viewStyle: 'shadedEdges',
   setViewStyle: (viewStyle) => set({ viewStyle }),
 
+  // Camera projection
+  cameraProjection: 'perspective',
+  toggleCameraProjection: () =>
+    set((s) => ({
+      cameraProjection: s.cameraProjection === 'perspective' ? 'orthographic' : 'perspective',
+    })),
+  setCameraProjection: (cameraProjection) => set({ cameraProjection }),
+
+  // Navigation style
+  navigationStyle: 'fusion360',
+  setNavigationStyle: (navigationStyle) => set({ navigationStyle }),
+
   // Status
   statusMessage: 'Ready',
   setStatusMessage: (statusMessage) => set({ statusMessage }),
@@ -701,4 +899,68 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   // Display settings
   displaySettingsOpen: false,
   toggleDisplaySettings: () => set((s) => ({ displaySettingsOpen: !s.displaySettingsOpen })),
+
+  // Clipboard
+  clipboard: [],
+
+  // View commands
+  viewCommand: null,
+  clearViewCommand: () => set({ viewCommand: null }),
+
+  // Command palette
+  commandPaletteOpen: false,
+  setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
+
+  // Section analysis plane
+  sectionPlane: { enabled: false, origin: [0, 0, 0], normal: [0, 1, 0] },
+  setSectionPlane: (partial) =>
+    set((s) => ({ sectionPlane: { ...s.sectionPlane, ...partial } })),
+  toggleSectionPlane: () =>
+    set((s) => ({ sectionPlane: { ...s.sectionPlane, enabled: !s.sectionPlane.enabled } })),
+
+  // Measure tool
+  measureResult: { pointA: null, pointB: null, distance: null, angle: null },
+  setMeasurePoint: (point, pos) =>
+    set((s) => {
+      const next = { ...s.measureResult };
+      if (point === 'A') {
+        next.pointA = pos;
+        next.pointB = null;
+        next.distance = null;
+        next.angle = null;
+      } else {
+        next.pointB = pos;
+        if (next.pointA) {
+          const dx = pos[0] - next.pointA[0];
+          const dy = pos[1] - next.pointA[1];
+          const dz = pos[2] - next.pointA[2];
+          next.distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        }
+      }
+      return { measureResult: next };
+    }),
+  clearMeasure: () =>
+    set({ measureResult: { pointA: null, pointB: null, distance: null, angle: null } }),
+
+  // Box / Window selection
+  boxSelection: { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0, mode: 'window' },
+  startBoxSelection: (x, y) =>
+    set({ boxSelection: { active: true, startX: x, startY: y, currentX: x, currentY: y, mode: 'window' } }),
+  updateBoxSelection: (x, y) =>
+    set((s) => {
+      const mode = x >= s.boxSelection.startX ? 'window' : 'crossing';
+      return { boxSelection: { ...s.boxSelection, currentX: x, currentY: y, mode } };
+    }),
+  endBoxSelection: () =>
+    set({ boxSelection: { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0, mode: 'window' } }),
+
+  // Auto-constraints
+  autoConstraintsEnabled: true,
+  toggleAutoConstraints: () => set((s) => ({ autoConstraintsEnabled: !s.autoConstraintsEnabled })),
+
+  // Grid snap
+  gridSnapEnabled: true,
+  gridSnapSize: 1,
+  toggleGridSnap: () => set((s) => ({ gridSnapEnabled: !s.gridSnapEnabled })),
+  setGridSnapSize: (gridSnapSize) => set({ gridSnapSize }),
 }));

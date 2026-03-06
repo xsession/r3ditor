@@ -191,3 +191,167 @@ pub fn check_bend_relief(
 
     findings
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use glam::Vec3;
+    use shared_types::geometry::{BoundingBox3D, TriMesh};
+
+    fn make_test_mesh(min: Vec3, max: Vec3) -> TriMesh {
+        TriMesh {
+            positions: vec![
+                [min.x, min.y, min.z],
+                [max.x, min.y, min.z],
+                [max.x, max.y, min.z],
+                [min.x, max.y, min.z],
+                [min.x, min.y, max.z],
+                [max.x, min.y, max.z],
+                [max.x, max.y, max.z],
+                [min.x, max.y, max.z],
+            ],
+            normals: vec![[0.0, 0.0, 1.0]; 8],
+            indices: vec![
+                0, 1, 2, 0, 2, 3, // bottom
+                4, 5, 6, 4, 6, 7, // top
+            ],
+            uvs: None,
+            bounds: BoundingBox3D { min, max },
+        }
+    }
+
+    // ── Wall Thickness ───────────────────────────────────────────────────
+
+    #[test]
+    fn test_wall_thickness_thin_x() {
+        let mesh = make_test_mesh(Vec3::ZERO, Vec3::new(0.5, 10.0, 10.0));
+        let findings = check_wall_thickness(&mesh, 1.0);
+        assert!(findings.len() >= 1);
+        assert!(findings.iter().any(|f| f.title.contains("X")));
+    }
+
+    #[test]
+    fn test_wall_thickness_thin_y() {
+        let mesh = make_test_mesh(Vec3::ZERO, Vec3::new(10.0, 0.3, 10.0));
+        let findings = check_wall_thickness(&mesh, 1.0);
+        assert!(findings.iter().any(|f| f.title.contains("Y")));
+    }
+
+    #[test]
+    fn test_wall_thickness_thin_z() {
+        let mesh = make_test_mesh(Vec3::ZERO, Vec3::new(10.0, 10.0, 0.2));
+        let findings = check_wall_thickness(&mesh, 1.0);
+        assert!(findings.iter().any(|f| f.title.contains("Z")));
+    }
+
+    #[test]
+    fn test_wall_thickness_ok() {
+        let mesh = make_test_mesh(Vec3::ZERO, Vec3::new(10.0, 10.0, 10.0));
+        let findings = check_wall_thickness(&mesh, 1.0);
+        assert!(findings.is_empty(), "No thin features in a 10mm cube");
+    }
+
+    #[test]
+    fn test_wall_thickness_severity() {
+        let mesh = make_test_mesh(Vec3::ZERO, Vec3::new(0.5, 10.0, 10.0));
+        let findings = check_wall_thickness(&mesh, 1.0);
+        for f in &findings {
+            assert_eq!(f.severity, DfmSeverity::Warning);
+            assert_eq!(f.category, DfmCategory::WallThickness);
+        }
+    }
+
+    #[test]
+    fn test_wall_thickness_measured_value() {
+        let mesh = make_test_mesh(Vec3::ZERO, Vec3::new(0.5, 10.0, 10.0));
+        let findings = check_wall_thickness(&mesh, 1.0);
+        let f = &findings[0];
+        assert!((f.measured_value.unwrap() - 0.5).abs() < 1e-10);
+        assert!((f.min_allowed.unwrap() - 1.0).abs() < 1e-10);
+    }
+
+    // ── Sharp Corners (currently stub) ───────────────────────────────────
+
+    #[test]
+    fn test_sharp_corners_stub_empty() {
+        let mesh = make_test_mesh(Vec3::ZERO, Vec3::new(10.0, 10.0, 10.0));
+        let findings = check_sharp_corners(&mesh, 0.5);
+        assert!(findings.is_empty(), "Stub should return empty");
+    }
+
+    // ── Hole Sizes ───────────────────────────────────────────────────────
+
+    #[test]
+    fn test_hole_sizes_too_small() {
+        let holes = vec![(0.5, 3.0)]; // diameter 0.5mm, depth 3mm
+        let findings = check_hole_sizes(1.0, 10.0, &holes);
+        assert!(findings.len() >= 1);
+        assert!(findings.iter().any(|f| f.title.contains("too small")));
+    }
+
+    #[test]
+    fn test_hole_sizes_high_aspect_ratio() {
+        let holes = vec![(2.0, 30.0)]; // diameter 2mm, depth 30mm → aspect 15:1
+        let findings = check_hole_sizes(1.0, 10.0, &holes);
+        assert!(findings.iter().any(|f| f.title.contains("aspect ratio")));
+    }
+
+    #[test]
+    fn test_hole_sizes_ok() {
+        let holes = vec![(5.0, 10.0)]; // diameter 5mm, depth 10mm → aspect 2:1
+        let findings = check_hole_sizes(1.0, 10.0, &holes);
+        assert!(findings.is_empty());
+    }
+
+    #[test]
+    fn test_hole_sizes_both_violations() {
+        let holes = vec![(0.5, 10.0)]; // too small AND high aspect ratio (20:1)
+        let findings = check_hole_sizes(1.0, 10.0, &holes);
+        assert_eq!(findings.len(), 2, "Should find both small and high-aspect");
+    }
+
+    #[test]
+    fn test_hole_sizes_multiple_holes() {
+        let holes = vec![(5.0, 5.0), (0.3, 1.0), (3.0, 50.0)];
+        let findings = check_hole_sizes(1.0, 10.0, &holes);
+        // Hole 2: too small. Hole 3: high aspect. Hole 1: ok
+        assert_eq!(findings.len(), 2);
+    }
+
+    // ── Draft Angles (stub) ──────────────────────────────────────────────
+
+    #[test]
+    fn test_draft_angles_stub_empty() {
+        let mesh = make_test_mesh(Vec3::ZERO, Vec3::new(10.0, 10.0, 10.0));
+        let findings = check_draft_angles(&mesh, 1.0, [0.0, 0.0, 1.0]);
+        assert!(findings.is_empty());
+    }
+
+    // ── Bend Relief ──────────────────────────────────────────────────────
+
+    #[test]
+    fn test_bend_relief_insufficient_width() {
+        let findings = check_bend_relief(2.0, 3.0, 1.0, 10.0);
+        assert!(findings.iter().any(|f| f.title.contains("width")));
+        assert!(findings.iter().any(|f| f.severity == DfmSeverity::Error));
+    }
+
+    #[test]
+    fn test_bend_relief_insufficient_depth() {
+        let findings = check_bend_relief(2.0, 3.0, 5.0, 3.0);
+        // min depth = thickness + radius = 2 + 3 = 5 > 3
+        assert!(findings.iter().any(|f| f.title.contains("Shallow")));
+    }
+
+    #[test]
+    fn test_bend_relief_ok() {
+        let findings = check_bend_relief(2.0, 3.0, 5.0, 10.0);
+        assert!(findings.is_empty(), "Adequate relief should have no findings");
+    }
+
+    #[test]
+    fn test_bend_relief_both_violations() {
+        let findings = check_bend_relief(2.0, 3.0, 1.0, 1.0);
+        assert_eq!(findings.len(), 2);
+    }
+}

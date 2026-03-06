@@ -2,9 +2,18 @@ import {
   Undo2, Redo2, ChevronDown, Search, Save,
   Bell, HelpCircle, User, Menu, FileText,
   FilePlus, FolderOpen, Download, Printer, Settings,
+  Cat,
 } from 'lucide-react';
 import { useEditorStore } from '../store/editorStore';
 import * as api from '../api/tauri';
+import { buildCallicat } from '../utils/callicatBuilder';
+import {
+  serializeProject,
+  projectToJSON,
+  projectFromJSON,
+  loadProjectIntoStore,
+} from '../store/modelSerializer';
+import { exportSceneToBinarySTL, downloadSTL } from '../utils/stlExporter';
 import clsx from 'clsx';
 import { useState, useRef, useEffect } from 'react';
 
@@ -29,6 +38,125 @@ export function DocumentHeader() {
     return () => document.removeEventListener('mousedown', handler);
   }, [fileMenuOpen]);
 
+  // ── File operations ──
+
+  const handleSave = async () => {
+    try {
+      const s = useEditorStore.getState();
+      const project = serializeProject();
+      const json = projectToJSON(project);
+
+      // In Tauri, use the dialog + fs plugins
+      const { save } = await import('@tauri-apps/plugin-dialog');
+      const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+
+      const filePath = await save({
+        defaultPath: `${s.documentName || 'Untitled'}.r3d.json`,
+        filters: [{ name: 'r3ditor Project', extensions: ['r3d.json'] }],
+      });
+
+      if (filePath) {
+        await writeTextFile(filePath, json);
+        useEditorStore.setState({ statusMessage: `💾 Saved project → ${filePath}` });
+      }
+    } catch (err) {
+      // Fallback: download via browser (for dev / non-Tauri)
+      const project = serializeProject();
+      const json = projectToJSON(project);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${useEditorStore.getState().documentName || 'project'}.r3d.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      useEditorStore.setState({ statusMessage: '💾 Downloaded project file' });
+    }
+  };
+
+  const handleOpen = async () => {
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      const { readTextFile } = await import('@tauri-apps/plugin-fs');
+
+      const filePath = await open({
+        filters: [{ name: 'r3ditor Project', extensions: ['r3d.json', 'json'] }],
+        multiple: false,
+      });
+
+      if (filePath) {
+        const content = await readTextFile(filePath as string);
+        const project = projectFromJSON(content);
+        loadProjectIntoStore(project);
+        useEditorStore.setState({ statusMessage: `📂 Opened: ${project.document.name}` });
+      }
+    } catch (err) {
+      // Fallback
+      toggleDataPanel();
+    }
+  };
+
+  const handleExportSTL = async () => {
+    try {
+      // Try backend export first (real mesh data)
+      const { save } = await import('@tauri-apps/plugin-dialog');
+
+      const filePath = await save({
+        defaultPath: `${useEditorStore.getState().documentName || 'model'}.stl`,
+        filters: [{ name: 'STL Mesh', extensions: ['stl'] }],
+      });
+
+      if (filePath) {
+        try {
+          const result = await api.exportAllStl(filePath);
+          useEditorStore.setState({ statusMessage: `📤 ${result} → ${filePath}` });
+        } catch {
+          // Backend has no mesh → use Three.js scene export
+          exportSceneFromViewport(filePath);
+        }
+      }
+    } catch (err) {
+      // Non-Tauri fallback: use Three.js scene exporter + download
+      const scene = (window as any).__r3ditor_scene;
+      if (scene) {
+        const buffer = exportSceneToBinarySTL(scene);
+        downloadSTL(buffer, `${useEditorStore.getState().documentName || 'model'}.stl`);
+        useEditorStore.setState({ statusMessage: '📤 Downloaded STL (frontend geometry)' });
+      } else {
+        useEditorStore.setState({ statusMessage: '⚠️ No scene available for STL export' });
+      }
+    }
+  };
+
+  const exportSceneFromViewport = (filePath: string) => {
+    const scene = (window as any).__r3ditor_scene;
+    if (scene) {
+      const buffer = exportSceneToBinarySTL(scene);
+      // Write via Tauri fs
+      import('@tauri-apps/plugin-fs').then(async ({ writeFile }) => {
+        await writeFile(filePath, new Uint8Array(buffer));
+        useEditorStore.setState({ statusMessage: `📤 Exported STL → ${filePath}` });
+      }).catch(() => {
+        downloadSTL(buffer, filePath.split(/[/\\]/).pop() || 'model.stl');
+        useEditorStore.setState({ statusMessage: '📤 Downloaded STL' });
+      });
+    }
+  };
+
+  const handleBuildCallicat = () => {
+    try {
+      // Reset to clean state first
+      useEditorStore.setState(useEditorStore.getInitialState());
+      buildCallicat();
+      setFileMenuOpen(false);
+      useEditorStore.setState({
+        statusMessage: `🐱 Callicat built! ${useEditorStore.getState().entities.length} entities, ${useEditorStore.getState().timeline.length} timeline entries`,
+      });
+    } catch (err) {
+      useEditorStore.setState({ statusMessage: `❌ Callicat build error: ${err}` });
+    }
+  };
+
   return (
     <div className="flex items-center h-10 px-1 bg-fusion-header border-b border-fusion-border select-none" data-tauri-drag-region>
       {/* ── File menu (hamburger) ── */}
@@ -50,14 +178,16 @@ export function DocumentHeader() {
         {/* File dropdown */}
         {fileMenuOpen && (
           <div className="absolute top-full left-0 mt-0.5 w-56 bg-fusion-surface border border-fusion-border-light rounded shadow-xl z-[200] py-1">
-            <FileMenuItem icon={FilePlus} label="New Design" shortcut="Ctrl+N" />
-            <FileMenuItem icon={FolderOpen} label="Open..." shortcut="Ctrl+O" onClick={() => { toggleDataPanel(); setFileMenuOpen(false); }} />
+            <FileMenuItem icon={FilePlus} label="New Design" shortcut="Ctrl+N" onClick={() => { useEditorStore.setState(useEditorStore.getInitialState()); setFileMenuOpen(false); }} />
+            <FileMenuItem icon={FolderOpen} label="Open..." shortcut="Ctrl+O" onClick={() => { handleOpen(); setFileMenuOpen(false); }} />
             <div className="h-px bg-fusion-border-light my-1 mx-2" />
-            <FileMenuItem icon={Save} label="Save" shortcut="Ctrl+S" />
-            <FileMenuItem icon={Save} label="Save As..." shortcut="Ctrl+Shift+S" />
+            <FileMenuItem icon={Save} label="Save" shortcut="Ctrl+S" onClick={() => { handleSave(); setFileMenuOpen(false); }} />
+            <FileMenuItem icon={Save} label="Save As..." shortcut="Ctrl+Shift+S" onClick={() => { handleSave(); setFileMenuOpen(false); }} />
             <div className="h-px bg-fusion-border-light my-1 mx-2" />
-            <FileMenuItem icon={Download} label="Export..." shortcut="Ctrl+E" />
+            <FileMenuItem icon={Download} label="Export STL..." shortcut="Ctrl+E" onClick={() => { handleExportSTL(); setFileMenuOpen(false); }} />
             <FileMenuItem icon={Printer} label="3D Print..." />
+            <div className="h-px bg-fusion-border-light my-1 mx-2" />
+            <FileMenuItem icon={Cat} label="Build Callicat 🐱" onClick={handleBuildCallicat} />
             <div className="h-px bg-fusion-border-light my-1 mx-2" />
             <FileMenuItem icon={Settings} label="Preferences..." />
           </div>
@@ -65,7 +195,7 @@ export function DocumentHeader() {
       </div>
 
       {/* ── Save button ── */}
-      <AppBarButton icon={Save} label="Save (Ctrl+S)" onClick={() => {}} />
+      <AppBarButton icon={Save} label="Save (Ctrl+S)" onClick={handleSave} />
 
       {/* ── Separator ── */}
       <AppBarSep />

@@ -113,9 +113,7 @@ impl AnalysisConsumer {
 
         // Parse STL and create a basic mesh for analysis
         // TODO: integrate with wasm-meshkit or cad-kernel for full parsing
-        let model = cad_kernel::brep::BRepModel::create_box("imported", 100.0, 50.0, 25.0);
-        let config = cad_kernel::tessellation::TessellationConfig::default();
-        let mesh = cad_kernel::tessellation::tessellate(&model, &config);
+        let mesh = cad_kernel::tessellation::tessellate_box(0.0, 0.0, 0.0, 100.0, 50.0, 25.0);
 
         let report = self.analyzer.analyze(&mesh);
         let result_json = serde_json::to_value(&report)?;

@@ -1,12 +1,17 @@
-//! 2D geometric constraint solver using Newton-Raphson iteration.
+//! 2D geometric constraint solver — Salome PlaneGCS-inspired cascading solver.
 //!
-//! The solver builds a system of equations from geometric constraints
-//! and iteratively solves for the positions of sketch elements.
+//! ## Algorithm Cascade (from Salome PlaneGCS)
+//! 1. **DogLeg** — Trust-region method (default)
+//! 2. **Levenberg-Marquardt** — Damped least-squares fallback
+//! 3. **BFGS** — Quasi-Newton last resort
+//!
+//! ## DOF Tracking
+//! Computes degrees of freedom via Jacobian rank analysis.
 
 use nalgebra::{DMatrix, DVector};
 use tracing::{debug, info, warn};
 
-use crate::types::{SolveResult, SolveStatus, SolverConfig};
+use crate::types::{SolveResult, SolveStatus, SolverAlgorithm, SolverConfig};
 
 /// A 2D point (variable in the solver)
 #[derive(Debug, Clone, Copy)]
@@ -110,7 +115,9 @@ impl SketchSolver {
         &self.points
     }
 
-    /// Solve the constraint system using Newton-Raphson
+    /// Solve the constraint system using cascading algorithms (PlaneGCS pattern)
+    ///
+    /// Tries: DogLeg → Levenberg-Marquardt → BFGS → Newton-Raphson
     pub fn solve(&mut self) -> SolveResult {
         if self.constraints.is_empty() {
             return SolveResult {
@@ -119,6 +126,9 @@ impl SketchSolver {
                 residual: 0.0,
                 dof: (self.free_var_count() as i32),
                 status: SolveStatus::Empty,
+                algorithm_used: None,
+                conflicting: vec![],
+                underconstrained: vec![],
             };
         }
 
@@ -130,77 +140,550 @@ impl SketchSolver {
             n_vars, n_constraints
         );
 
-        // Pack point positions into variable vector
-        let mut x = self.pack_variables();
+        // Save initial state for rollback between attempts
+        let initial_state: Vec<Point2D> = self.points.clone();
 
+        if self.config.use_cascading {
+            // Cascading: DogLeg → LevenbergMarquardt → BFGS → Newton
+            let algorithms = [
+                SolverAlgorithm::DogLeg,
+                SolverAlgorithm::LevenbergMarquardt,
+                SolverAlgorithm::BFGS,
+                SolverAlgorithm::NewtonRaphson,
+            ];
+
+            for algo in &algorithms {
+                // Reset to initial state before each attempt
+                self.points = initial_state.clone();
+                let mut x = self.pack_variables();
+
+                let result = match algo {
+                    SolverAlgorithm::DogLeg => self.solve_dogleg(&mut x),
+                    SolverAlgorithm::LevenbergMarquardt => self.solve_levenberg_marquardt(&mut x),
+                    SolverAlgorithm::BFGS => self.solve_bfgs(&mut x),
+                    SolverAlgorithm::NewtonRaphson => self.solve_newton(&mut x),
+                };
+
+                if result.converged {
+                    let dof = n_vars as i32 - n_constraints as i32;
+                    self.unpack_variables(&x);
+                    return SolveResult {
+                        converged: true,
+                        iterations: result.iterations,
+                        residual: result.residual,
+                        dof,
+                        status: if dof == 0 {
+                            SolveStatus::FullyConstrained
+                        } else if dof > 0 {
+                            SolveStatus::UnderConstrained
+                        } else {
+                            SolveStatus::OverConstrained
+                        },
+                        algorithm_used: Some(*algo),
+                        conflicting: vec![],
+                        underconstrained: self.find_underconstrained(&x),
+                    };
+                }
+
+                debug!("{:?} failed, trying next algorithm...", algo);
+            }
+
+            // All algorithms failed — detect conflicts
+            self.points = initial_state;
+            let x = self.pack_variables();
+            let conflicting = self.detect_conflicts(&x);
+
+            SolveResult {
+                converged: false,
+                iterations: self.config.max_iterations,
+                residual: f64::MAX,
+                dof: n_vars as i32 - n_constraints as i32,
+                status: if !conflicting.is_empty() {
+                    SolveStatus::OverConstrained
+                } else {
+                    SolveStatus::DidNotConverge
+                },
+                algorithm_used: None,
+                conflicting,
+                underconstrained: vec![],
+            }
+        } else {
+            // Single algorithm: Newton-Raphson
+            let mut x = self.pack_variables();
+            let result = self.solve_newton(&mut x);
+            let dof = n_vars as i32 - n_constraints as i32;
+
+            if result.converged {
+                self.unpack_variables(&x);
+            }
+
+            SolveResult {
+                converged: result.converged,
+                iterations: result.iterations,
+                residual: result.residual,
+                dof,
+                status: if result.converged {
+                    if dof == 0 { SolveStatus::FullyConstrained }
+                    else if dof > 0 { SolveStatus::UnderConstrained }
+                    else { SolveStatus::OverConstrained }
+                } else {
+                    SolveStatus::DidNotConverge
+                },
+                algorithm_used: Some(SolverAlgorithm::NewtonRaphson),
+                conflicting: vec![],
+                underconstrained: vec![],
+            }
+        }
+    }
+
+    /// Internal solve result (no DOF tracking)
+    fn make_internal_result(converged: bool, iterations: u32, residual: f64) -> InternalResult {
+        InternalResult { converged, iterations, residual }
+    }
+
+    /// Newton-Raphson solver (original algorithm)
+    fn solve_newton(&self, x: &mut DVector<f64>) -> InternalResult {
         for iteration in 0..self.config.max_iterations {
-            // Evaluate residuals
-            let f = self.evaluate_residuals(&x);
+            let f = self.evaluate_residuals(x);
             let residual = f.norm();
 
             if residual < self.config.tolerance {
-                self.unpack_variables(&x);
-                let dof = n_vars as i32 - n_constraints as i32;
-                info!(
-                    "Converged in {} iterations, residual={:.2e}, DOF={}",
-                    iteration, residual, dof
-                );
-                return SolveResult {
-                    converged: true,
-                    iterations: iteration,
-                    residual,
-                    dof,
-                    status: if dof == 0 {
-                        SolveStatus::FullyConstrained
-                    } else if dof > 0 {
-                        SolveStatus::UnderConstrained
-                    } else {
-                        SolveStatus::OverConstrained
-                    },
-                };
+                return Self::make_internal_result(true, iteration, residual);
             }
 
-            // Compute Jacobian
-            let j = self.compute_jacobian(&x);
-
-            // Solve J * dx = -f using least-squares (for non-square systems)
+            let j = self.compute_jacobian(x);
             let jt = j.transpose();
             let jtj = &jt * &j;
             let jtf = &jt * &f;
 
-            // Add small regularization for numerical stability
             let reg = DMatrix::identity(jtj.nrows(), jtj.ncols()) * 1e-12;
             let jtj_reg = jtj + reg;
 
             match jtj_reg.lu().solve(&jtf) {
-                Some(dx) => {
-                    // Apply damped Newton step
-                    x -= self.config.damping * dx;
-                }
+                Some(dx) => { *x -= self.config.damping * dx; }
                 None => {
-                    warn!("Jacobian is singular at iteration {}", iteration);
-                    self.unpack_variables(&x);
-                    return SolveResult {
-                        converged: false,
-                        iterations: iteration,
-                        residual,
-                        dof: n_vars as i32 - n_constraints as i32,
-                        status: SolveStatus::OverConstrained,
-                    };
+                    warn!("Newton: Jacobian singular at iteration {}", iteration);
+                    return Self::make_internal_result(false, iteration, residual);
                 }
             }
         }
 
-        let f = self.evaluate_residuals(&x);
-        self.unpack_variables(&x);
+        let residual = self.evaluate_residuals(x).norm();
+        Self::make_internal_result(false, self.config.max_iterations, residual)
+    }
 
-        SolveResult {
-            converged: false,
-            iterations: self.config.max_iterations,
-            residual: f.norm(),
-            dof: n_vars as i32 - n_constraints as i32,
-            status: SolveStatus::DidNotConverge,
+    /// DogLeg trust-region solver (Salome PlaneGCS default)
+    fn solve_dogleg(&self, x: &mut DVector<f64>) -> InternalResult {
+        let mut trust_radius = self.config.trust_radius;
+        let eta = 0.125; // Acceptance threshold
+
+        for iteration in 0..self.config.max_iterations {
+            let f = self.evaluate_residuals(x);
+            let residual = f.norm();
+
+            if residual < self.config.tolerance {
+                return Self::make_internal_result(true, iteration, residual);
+            }
+
+            let j = self.compute_jacobian(x);
+            let jt = j.transpose();
+            let g = &jt * &f;  // gradient
+
+            // Gauss-Newton step
+            let jtj = &jt * &j;
+            let reg = DMatrix::identity(jtj.nrows(), jtj.ncols()) * 1e-12;
+            let gn_step = match (jtj + reg).lu().solve(&g) {
+                Some(s) => s,
+                None => {
+                    // Singular — fall through to next algorithm
+                    return Self::make_internal_result(false, iteration, residual);
+                }
+            };
+
+            // Steepest descent step
+            let g_norm_sq = g.dot(&g);
+            let jg = &j * &g;
+            let jg_norm_sq = jg.dot(&jg);
+            let alpha = if jg_norm_sq > 1e-15 { g_norm_sq / jg_norm_sq } else { 1.0 };
+            let sd_step = &g * alpha;
+
+            // Dog-leg step selection
+            let gn_norm = gn_step.norm();
+            let sd_norm = sd_step.norm();
+
+            let step = if gn_norm <= trust_radius {
+                // Gauss-Newton step is inside trust region
+                gn_step
+            } else if sd_norm >= trust_radius {
+                // Steepest descent step already exceeds trust region — scale it
+                &sd_step * (trust_radius / sd_norm)
+            } else {
+                // Interpolate between steepest descent and Gauss-Newton
+                let diff = &gn_step - &sd_step;
+                let d_dot_d = diff.dot(&diff);
+                let sd_dot_d = sd_step.dot(&diff);
+                let sd_sq = sd_norm * sd_norm;
+                let delta_sq = trust_radius * trust_radius;
+
+                let disc = (sd_dot_d * sd_dot_d - d_dot_d * (sd_sq - delta_sq)).max(0.0).sqrt();
+                let beta = (-sd_dot_d + disc) / d_dot_d;
+                &sd_step + &diff * beta.clamp(0.0, 1.0)
+            };
+
+            // Evaluate new point
+            let x_new = &*x - &step;
+            let f_new = self.evaluate_residuals(&x_new);
+            let new_residual = f_new.norm();
+
+            // Actual vs predicted reduction
+            let actual_reduction = residual * residual - new_residual * new_residual;
+            let predicted = (&j * &step).dot(&f) * 2.0 - (&j * &step).norm_squared();
+            let rho = if predicted.abs() > 1e-15 { actual_reduction / predicted } else { 0.0 };
+
+            // Update trust radius
+            if rho < 0.25 {
+                trust_radius *= 0.25;
+            } else if rho > 0.75 {
+                trust_radius = (trust_radius * 2.0).min(100.0);
+            }
+
+            // Accept step if good enough
+            if rho > eta {
+                *x = x_new;
+            }
+
+            if trust_radius < 1e-15 {
+                return Self::make_internal_result(false, iteration, residual);
+            }
         }
+
+        let residual = self.evaluate_residuals(x).norm();
+        Self::make_internal_result(false, self.config.max_iterations, residual)
+    }
+
+    /// Levenberg-Marquardt solver (Salome PlaneGCS fallback #2)
+    fn solve_levenberg_marquardt(&self, x: &mut DVector<f64>) -> InternalResult {
+        let mut lambda = self.config.lm_lambda;
+
+        for iteration in 0..self.config.max_iterations {
+            let f = self.evaluate_residuals(x);
+            let residual = f.norm();
+
+            if residual < self.config.tolerance {
+                return Self::make_internal_result(true, iteration, residual);
+            }
+
+            let j = self.compute_jacobian(x);
+            let jt = j.transpose();
+            let jtj = &jt * &j;
+            let jtf = &jt * &f;
+
+            // Damped normal equations: (JᵀJ + λI) Δx = Jᵀf
+            let diag = DMatrix::from_diagonal(&jtj.diagonal()) * lambda;
+            let lhs = &jtj + &diag;
+
+            match lhs.lu().solve(&jtf) {
+                Some(dx) => {
+                    let x_new = &*x - &dx;
+                    let f_new = self.evaluate_residuals(&x_new);
+                    let new_residual = f_new.norm();
+
+                    if new_residual < residual {
+                        // Good step — reduce damping
+                        *x = x_new;
+                        lambda *= 0.1;
+                        lambda = lambda.max(1e-15);
+                    } else {
+                        // Bad step — increase damping
+                        lambda *= 10.0;
+                        lambda = lambda.min(1e15);
+                    }
+                }
+                None => {
+                    lambda *= 10.0;
+                    if lambda > 1e15 {
+                        return Self::make_internal_result(false, iteration, residual);
+                    }
+                }
+            }
+        }
+
+        let residual = self.evaluate_residuals(x).norm();
+        Self::make_internal_result(false, self.config.max_iterations, residual)
+    }
+
+    /// BFGS quasi-Newton solver (Salome PlaneGCS last resort)
+    fn solve_bfgs(&self, x: &mut DVector<f64>) -> InternalResult {
+        let n = x.len();
+        if n == 0 {
+            return Self::make_internal_result(true, 0, 0.0);
+        }
+
+        // Cost function: ||f(x)||² / 2
+        let compute_cost = |x_val: &DVector<f64>| -> f64 {
+            let f = self.evaluate_residuals(x_val);
+            0.5 * f.dot(&f)
+        };
+
+        // Gradient: Jᵀ * f
+        let compute_gradient = |x_val: &DVector<f64>| -> DVector<f64> {
+            let f = self.evaluate_residuals(x_val);
+            let j = self.compute_jacobian(x_val);
+            j.transpose() * f
+        };
+
+        let mut h_inv = DMatrix::identity(n, n); // Inverse Hessian approximation
+        let mut grad = compute_gradient(x);
+        let mut cost = compute_cost(x);
+
+        for iteration in 0..self.config.max_iterations {
+            if cost.sqrt() < self.config.tolerance {
+                return Self::make_internal_result(true, iteration, cost.sqrt());
+            }
+
+            // Search direction: p = -H⁻¹ * grad
+            let p = -&h_inv * &grad;
+
+            // Line search (Armijo backtracking)
+            let mut alpha = 1.0;
+            let c1 = 1e-4;
+            let dir_deriv = grad.dot(&p);
+
+            let x_new;
+            loop {
+                let x_trial = &*x + alpha * &p;
+                let cost_trial = compute_cost(&x_trial);
+                if cost_trial <= cost + c1 * alpha * dir_deriv || alpha < 1e-12 {
+                    x_new = x_trial;
+                    break;
+                }
+                alpha *= 0.5;
+            }
+
+            let new_grad = compute_gradient(&x_new);
+            let new_cost = compute_cost(&x_new);
+
+            // BFGS update
+            let s = &x_new - &*x;
+            let y = &new_grad - &grad;
+            let sy = s.dot(&y);
+
+            if sy > 1e-15 {
+                let rho = 1.0 / sy;
+                let i_mat = DMatrix::identity(n, n);
+                let sy_outer = &s * y.transpose() * rho;
+                let left = &i_mat - &sy_outer;
+                let right = &i_mat - (&y * s.transpose() * rho);
+                let ss_outer = &s * s.transpose() * rho;
+                h_inv = &left * &h_inv * &right + ss_outer;
+            }
+
+            *x = x_new;
+            grad = new_grad;
+            cost = new_cost;
+        }
+
+        Self::make_internal_result(false, self.config.max_iterations, cost.sqrt())
+    }
+
+    /// Detect conflicting constraints by checking individual constraint residuals
+    fn detect_conflicts(&self, x: &DVector<f64>) -> Vec<usize> {
+        let f = self.evaluate_residuals(x);
+        let mut conflicts = Vec::new();
+        let mut row = 0;
+        let threshold = 1e-4;
+
+        for (idx, constraint) in self.constraints.iter().enumerate() {
+            let n_eqs = match constraint {
+                Constraint2D::Coincident { .. } | Constraint2D::FixedPoint { .. } |
+                Constraint2D::Midpoint { .. } => 2,
+                _ => 1,
+            };
+
+            let mut max_residual: f64 = 0.0;
+            for i in 0..n_eqs {
+                if row + i < f.len() {
+                    max_residual = max_residual.max(f[row + i].abs());
+                }
+            }
+
+            if max_residual > threshold {
+                conflicts.push(idx);
+            }
+            row += n_eqs;
+        }
+
+        conflicts
+    }
+
+    /// FreeCAD PlaneGCS-inspired DOF diagnosis via Jacobian rank analysis.
+    ///
+    /// Returns a `DiagnosisResult` with:
+    /// - `dof`: true degrees of freedom (params - rank(J))
+    /// - `conflicting`: constraint indices whose equations are inconsistent
+    /// - `redundant`: constraint indices that are linearly dependent on others
+    /// - `partially_redundant`: constraints nearly redundant (numerically close)
+    /// - `well_constrained`: whether DOF == 0 with no conflicts
+    pub fn diagnose(&self) -> DiagnosisResult {
+        let x = self.pack_variables();
+        let n_vars = x.len();
+        let n_eqs = self.constraint_count();
+
+        if n_eqs == 0 {
+            return DiagnosisResult {
+                dof: n_vars as i32,
+                conflicting: vec![],
+                redundant: vec![],
+                partially_redundant: vec![],
+                well_constrained: n_vars == 0,
+                underconstrained_params: vec![],
+            };
+        }
+
+        let j = self.compute_jacobian(&x);
+
+        // SVD for rank analysis (FreeCAD uses QR, but SVD gives same info + more)
+        let svd = j.clone().svd(true, true);
+        let sv = &svd.singular_values;
+
+        // Rank via singular value threshold (FreeCAD: convergence tolerance)
+        let rank_threshold = 1e-8;
+        let rank = sv.iter().filter(|&&s| s > rank_threshold).count();
+        let dof = n_vars as i32 - rank as i32;
+
+        // Find underconstrained parameters (null space of J)
+        let underconstrained_params = if let Some(ref vt) = svd.v_t {
+            let mut free = Vec::new();
+            for i in rank..sv.len().min(vt.nrows()) {
+                for col in 0..vt.ncols() {
+                    if vt[(i, col)].abs() > 0.1 && !free.contains(&col) {
+                        free.push(col);
+                    }
+                }
+            }
+            free
+        } else {
+            vec![]
+        };
+
+        // Find redundant constraints via row analysis of U matrix
+        // Rows of U corresponding to near-zero singular values indicate redundancy
+        let mut redundant = Vec::new();
+        let mut partially_redundant = Vec::new();
+        if let Some(ref u) = svd.u {
+            // Map equation rows back to constraint indices
+            let eq_to_constraint = self.build_equation_to_constraint_map();
+
+            for sv_idx in rank..sv.len().min(u.ncols()) {
+                let sv_val = sv[sv_idx];
+                // Find which equation rows contribute most to this singular vector
+                let mut max_contribution = 0.0_f64;
+                let mut max_row = 0;
+                for row in 0..u.nrows() {
+                    let c = u[(row, sv_idx)].abs();
+                    if c > max_contribution {
+                        max_contribution = c;
+                        max_row = row;
+                    }
+                }
+
+                if max_contribution > 0.1 {
+                    let constraint_idx = eq_to_constraint.get(&max_row).copied().unwrap_or(max_row);
+                    if sv_val < 1e-12 {
+                        if !redundant.contains(&constraint_idx) {
+                            redundant.push(constraint_idx);
+                        }
+                    } else if sv_val < 1e-4 {
+                        if !partially_redundant.contains(&constraint_idx) {
+                            partially_redundant.push(constraint_idx);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Detect conflicting constraints (high residual after solve attempt)
+        let f = self.evaluate_residuals(&x);
+        let mut conflicting = Vec::new();
+        let conflict_threshold = 1e-4;
+        let mut row = 0;
+        for (idx, constraint) in self.constraints.iter().enumerate() {
+            let n = match constraint {
+                Constraint2D::Coincident { .. } | Constraint2D::FixedPoint { .. } |
+                Constraint2D::Midpoint { .. } => 2,
+                _ => 1,
+            };
+            let mut max_res: f64 = 0.0;
+            for i in 0..n {
+                if row + i < f.len() {
+                    max_res = max_res.max(f[row + i].abs());
+                }
+            }
+            if max_res > conflict_threshold && redundant.contains(&idx) {
+                conflicting.push(idx);
+            }
+            row += n;
+        }
+
+        DiagnosisResult {
+            dof,
+            well_constrained: dof == 0 && conflicting.is_empty(),
+            conflicting,
+            redundant,
+            partially_redundant,
+            underconstrained_params,
+        }
+    }
+
+    /// Build mapping from equation row index to constraint index
+    fn build_equation_to_constraint_map(&self) -> std::collections::HashMap<usize, usize> {
+        let mut map = std::collections::HashMap::new();
+        let mut row = 0;
+        for (idx, constraint) in self.constraints.iter().enumerate() {
+            let n_eqs = match constraint {
+                Constraint2D::Coincident { .. } | Constraint2D::FixedPoint { .. } |
+                Constraint2D::Midpoint { .. } => 2,
+                _ => 1,
+            };
+            for i in 0..n_eqs {
+                map.insert(row + i, idx);
+            }
+            row += n_eqs;
+        }
+        map
+    }
+
+    /// Find underconstrained parameters via Jacobian rank analysis
+    fn find_underconstrained(&self, x: &DVector<f64>) -> Vec<usize> {
+        let j = self.compute_jacobian(x);
+        let n_vars = j.ncols();
+        if n_vars == 0 {
+            return vec![];
+        }
+
+        // SVD to find rank-deficient columns
+        let svd = j.svd(true, true);
+        let threshold = 1e-8;
+        let mut free_params = Vec::new();
+
+        // Columns of V corresponding to near-zero singular values are underconstrained
+        if let Some(vt) = &svd.v_t {
+            for i in 0..svd.singular_values.len().min(n_vars) {
+                if svd.singular_values[i] < threshold {
+                    // This singular vector direction is free
+                    // Map back to parameter indices
+                    for j_idx in 0..n_vars {
+                        if vt[(i, j_idx)].abs() > 0.1 {
+                            if !free_params.contains(&j_idx) {
+                                free_params.push(j_idx);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        free_params
     }
 
     /// Count free (non-fixed) variables
@@ -434,10 +917,33 @@ impl Default for SketchSolver {
     }
 }
 
+/// DOF diagnosis result (FreeCAD PlaneGCS `diagnose()` equivalent)
+#[derive(Debug, Clone)]
+pub struct DiagnosisResult {
+    /// True degrees of freedom: params - rank(Jacobian)
+    pub dof: i32,
+    /// Whether system is DOF=0 with no conflicts (ideal state)
+    pub well_constrained: bool,
+    /// Constraint indices that conflict (inconsistent equations)
+    pub conflicting: Vec<usize>,
+    /// Constraint indices that are redundant (linearly dependent)
+    pub redundant: Vec<usize>,
+    /// Constraint indices that are nearly redundant (numerically ill-conditioned)
+    pub partially_redundant: Vec<usize>,
+    /// Parameter indices that are underconstrained (null space of J)
+    pub underconstrained_params: Vec<usize>,
+}
+
+/// Internal result for algorithm subroutines (no DOF/conflict info)
+struct InternalResult {
+    converged: bool,
+    iterations: u32,
+    residual: f64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::SolveStatus;
 
     #[test]
     fn test_horizontal_constraint() {
