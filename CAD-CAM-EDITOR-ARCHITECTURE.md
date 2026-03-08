@@ -1,147 +1,195 @@
-# ManuShop CAD/CAM Editor — Optimal Open-Source Architecture
+# r3ditor CAD/CAM Editor — Architecture Document
 
-> **Brand-New, High-Performance, Multicore, GPU-Accelerated, Intuitive 3D CAD/CAM Environment**
+> **Open-Source, High-Performance, Multicore Rust CAD/CAM Editor**
 >
-> Generated from the DFM Quote Suite project stack audit — March 2026
+> Living architecture document — reflects the **actual implemented state** of the codebase
+> as of the latest build. Planned/future features are clearly marked with 🔮.
+>
+> Last updated: June 2025 · r3ditor v0.2.0 · Rust 1.93 · Edition 2021
 
 ---
 
 ## Table of Contents
 
 1. [Executive Summary](#1-executive-summary)
-2. [Current Project Stack (Audit)](#2-current-project-stack-audit)
-3. [Target Architecture Vision](#3-target-architecture-vision)
+2. [Current Project Stack](#2-current-project-stack)
+3. [Architecture Overview](#3-architecture-overview)
 4. [Core Architecture — ECS + B-Rep Hybrid](#4-core-architecture--ecs--b-rep-hybrid)
 5. [CAD Kernel Layer](#5-cad-kernel-layer)
-6. [CAM/Manufacturing Layer](#6-cammanufacturing-layer)
-7. [GPU Acceleration Pipeline](#7-gpu-acceleration-pipeline)
-8. [Multicore Parallelism Strategy](#8-multicore-parallelism-strategy)
+6. [Sketch System & Blender/CAD_Sketcher Patterns](#6-sketch-system--blendercad_sketcher-patterns)
+7. [CAM / Manufacturing Layer](#7-cam--manufacturing-layer)
+8. [Constraint Solver](#8-constraint-solver)
 9. [Rendering Engine](#9-rendering-engine)
 10. [User Interface / UX Layer](#10-user-interface--ux-layer)
-11. [File Format & Data Exchange](#11-file-format--data-exchange)
-12. [Plugin / Extension Architecture](#12-plugin--extension-architecture)
-13. [Deployment Topology](#13-deployment-topology)
-14. [Complete Technology Matrix](#14-complete-technology-matrix)
+11. [Desktop Application (Tauri Bridge)](#11-desktop-application-tauri-bridge)
+12. [File Format & Data Exchange](#12-file-format--data-exchange)
+13. [Plugin / Extension Architecture](#13-plugin--extension-architecture)
+14. [Deployment Topology](#14-deployment-topology)
 15. [Crate / Package Dependency Map](#15-crate--package-dependency-map)
-16. [Performance Targets](#16-performance-targets)
-17. [Migration Path from Current Stack](#17-migration-path-from-current-stack)
-18. [Appendix A — Full Current Stack Inventory](#appendix-a--full-current-stack-inventory)
-19. [Appendix B — Recommended Crate Versions](#appendix-b--recommended-crate-versions)
+16. [Technology Matrix](#16-technology-matrix)
+17. [Test Coverage](#17-test-coverage)
+18. [Performance Targets](#18-performance-targets)
+19. [Implementation Status & Roadmap](#19-implementation-status--roadmap)
+20. [Appendix A — Workspace Crate Inventory](#appendix-a--workspace-crate-inventory)
+21. [Appendix B — Cargo Workspace Dependencies](#appendix-b--cargo-workspace-dependencies)
 
 ---
 
 ## 1. Executive Summary
 
-This document defines the **optimal software architecture** for a brand-new open-source 3D CAD/CAM editor, derived from auditing the existing **DFM Quote Suite** monorepo and mapping its capabilities onto a production-grade, multicore, GPU-accelerated design environment.
+r3ditor is an **open-source 3D CAD/CAM editor** built entirely in Rust with a React/TypeScript/Three.js frontend via Tauri 2. The project currently consists of **15 Rust workspace crates** and a **Tauri 2 desktop application** with ~20,460 lines of Rust and ~1,390+ lines of TypeScript in the core store/API layer.
 
 ### Design Principles
 
 | # | Principle | Implementation |
 |---|-----------|---------------|
-| 1 | **Rust-first, zero-cost abstractions** | All kernel, compute, and rendering code in Rust 2021 edition |
-| 2 | **GPU-native geometry processing** | wgpu 28 (Vulkan/Metal/DX12/WebGPU) for tessellation, BVH, booleans |
-| 3 | **Multicore by default** | Rayon data parallelism + Tokio async I/O + ECS parallel schedules |
-| 4 | **B-Rep + mesh dual representation** | NURBS/B-Rep for CAD accuracy, GPU mesh for visualization & CAM |
-| 5 | **Modular crate ecosystem** | Ship-of-Theseus design — every subsystem is a replaceable crate |
-| 6 | **Web-native deployment** | WASM target for browser, native target for desktop, shared core |
-| 7 | **Intuitive, modern UI** | egui immediate-mode for viewport, React/Tauri for panels & workflows |
-| 8 | **DFM + quoting integrated** | Manufacturing analysis is a first-class citizen, not an afterthought |
+| 1 | **Rust-first, zero-cost abstractions** | All kernel, solver, and engine code in Rust 2021 edition |
+| 2 | **B-Rep + Mesh dual representation** | Truck-based NURBS/B-Rep for accuracy, TriMesh for GPU & CAM |
+| 3 | **Multicore by default** | Rayon data parallelism + Tokio async I/O |
+| 4 | **Modular crate ecosystem** | 15 independent crates — every subsystem is replaceable |
+| 5 | **Blender/CAD_Sketcher-inspired UX** | Stateful tool framework, GPU picking, snap engine, snapshot undo |
+| 6 | **Fusion 360-style frontend** | React + Zustand store modeling workspaces, timeline, browser tree |
+| 7 | **Desktop-first via Tauri 2** | 37 Tauri IPC commands bridging Rust ↔ React |
+| 8 | **DFM + Manufacturing integrated** | CAM toolpaths, G-code, nesting, and DFM analysis as first-class features |
+
+### Key Metrics
+
+| Metric | Value |
+|--------|-------|
+| Rust workspace crates | 15 |
+| Total Rust source lines | ~20,460 |
+| Rust tests passing | 295 |
+| Frontend tests passing | 319 |
+| Tauri IPC commands | 37 |
+| Feature kinds (CAD kernel) | 20 |
+| Sketch constraint types | 19 |
+| Sketch entity types | 7 |
+| CNC post-processors | 8 (Fanuc, Haas, Mazak, Siemens, LinuxCNC, Grbl, Marlin, Klipper) |
+| Materials catalog | 17 sheet + 6 CNC |
+| Desktop binary size | ~14.8 MB |
 
 ---
 
-## 2. Current Project Stack (Audit)
+## 2. Current Project Stack
 
-### 2.1 What We Have Today
+### 2.1 What We Have Today (Implemented)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    DFM QUOTE SUITE (Current)                    │
+│                      r3ditor v0.2.0 (Current)                   │
 ├─────────────────────────────────────────────────────────────────┤
-│  GUI              │ React 18 + Three.js 0.170 + R3F + Drei     │
-│  Build            │ Vite 6.0 + TypeScript 5.6 + Tailwind 3.4   │
-│  API Gateway      │ Axum 0.7 + Tokio + utoipa Swagger           │
-│  Worker Analysis  │ Rust + wgpu 0.19 + physics estimators       │
-│  Worker CAD       │ Rust + OpenCascade (sidecar container)      │
-│  WASM MeshKit     │ wasm-bindgen + STL parse + simplify + DFM   │
-│  Shared Types     │ Rust crate (api, dfm, estimation, materials)│
-│  Database         │ PostgreSQL 16 (sqlx 0.7, migrations)        │
-│  Cache/Queue      │ Redis 7 (streams)                           │
-│  Object Storage   │ MinIO / S3 (aws-sdk-s3 v1)                 │
-│  Containers       │ Docker multi-stage, docker-compose          │
-│  Orchestration    │ Kubernetes (GPU node pool)                  │
+│  Desktop Shell    │ Tauri 2.2 native window                     │
+│  Frontend         │ React 18.3 + TypeScript 5.6 + Zustand 5.0  │
+│  3D Viewport      │ Three.js 0.170 + @react-three/fiber 8.17   │
+│  Build            │ Vite 6.4 + Tailwind 3.4                    │
+│  CAD Kernel       │ Rust + Truck (B-Rep/NURBS) + 20 features   │
+│  Sketch System    │ 7 entity types, 19 constraints, 4 tools    │
+│  Sketch Ops       │ Trim, bevel, offset, path walker, bezier   │
+│  Snap Engine      │ 7 snap types + GPU picking color map       │
+│  Tool Framework   │ Stateful tool system (Blender-inspired)    │
+│  Snapshot/Undo    │ Sketch snapshots + clipboard + copy/paste  │
+│  Constraint Solver│ 2D Newton-Raphson (DogLeg→LM→BFGS→NR)     │
+│  3D Assembly      │ Mate, Align, Offset, Angle, Fixed          │
+│  CAM Engine       │ CNC toolpaths + G-code + nesting + sheet   │
+│  DFM Analysis     │ Configurable checks + severity scoring     │
+│  Plugin Runtime   │ Wasmtime WASM sandboxed execution          │
+│  WASM Meshkit     │ Browser STL parse + simplify + LOD         │
+│  Renderer         │ wgpu-based camera + scene + viewport       │
+│  Editor Shell     │ ECS world + 22 commands + 21 tools         │
+│  Shared Types     │ Geometry, materials, estimation, DFM types │
+│  API Gateway      │ Axum 0.7 REST + SSE + Swagger              │
+│  Workers          │ Redis stream consumers (CAD, CAM, Analysis)│
+│  Database         │ PostgreSQL 16 (sqlx 0.7, migrations)       │
+│  Object Storage   │ MinIO / S3 (aws-sdk-s3)                    │
+│  Containers       │ Docker multi-stage + docker-compose        │
 │  Observability    │ Prometheus + Grafana                        │
-│  Platform Plugins │ Shopify, WooCommerce, BigCommerce, Magento, Wix │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 Strengths to Preserve
+### 2.2 Workspace Structure (15 Crates)
 
-- ✅ **Rust backend** — memory safety, performance, fearless concurrency
-- ✅ **wgpu GPU compute** — cross-platform GPU, already in the stack
-- ✅ **Physics-based estimators** — Kienzle, Loewen-Shaw, Altintas, laser/plasma/waterjet models
-- ✅ **17 sheet materials + 6 CNC materials** — real-world data with thicknesses/properties
-- ✅ **WASM mesh processing** — client-side STL parsing, simplification, LOD
-- ✅ **OpenCascade integration** — STEP/IGES import/export via sidecar
-- ✅ **Multi-tenant SaaS architecture** — JWT, tenant headers, platform adapters
-- ✅ **Docker + K8s deployment** — GPU-enabled worker pods, auto-scaling
+```
+packages/
+├── shared-types/          # Foundation types (materials, geometry, estimation)
+│   └── 9 source files, 1,130 lines, 0 tests
+├── cad-kernel/            # B-Rep/NURBS kernel + sketch ops + snap + tools + snapshot
+│   └── 13 source files, 10,269 lines, 125 tests
+├── constraint-solver/     # 2D sketch + 3D assembly constraint solving
+│   └── 4 source files, 1,915 lines, 30 tests
+├── cam-engine/            # Toolpaths, G-code, nesting, sheet metal
+│   └── 6 source files, 1,555 lines, 64 tests
+├── dfm-analyzer/          # DFM checks and scoring
+│   └── 3 source files, 561 lines, 27 tests
+├── renderer/              # wgpu camera + scene + viewport
+│   └── 6 source files, 553 lines, 0 tests
+├── editor-shell/          # ECS orchestrator + commands + tool system
+│   └── 6 source files, 1,301 lines, 22 tests
+├── plugin-runtime/        # Wasmtime WASM plugin host
+│   └── 4 source files, 463 lines, 7 tests
+├── api-gateway/           # Axum REST API
+├── worker-analysis/       # DFM worker (Redis consumer)
+├── worker-cad/            # CAD geometry worker
+├── worker-cam/            # CAM manufacturing worker
+├── wasm-meshkit/          # Browser WASM mesh toolkit
+│   └── 4 source files, 531 lines, 20 tests
+└── bench/                 # Criterion benchmarks
 
-### 2.3 Gaps to Fill for a Full CAD/CAM Editor
-
-| Gap | Current State | Required |
-|-----|---------------|----------|
-| **Parametric modeling** | None — upload-only | Sketch → extrude → fillet → assembly workflow |
-| **Constraint solver** | None | 2D geometric constraints + 3D assembly constraints |
-| **History tree** | None | Feature-based parametric history with rollback |
-| **Direct editing** | None | Push/pull, move face, offset, shell |
-| **Toolpath generation** | Estimation only | Full CNC G-code, laser paths, nesting |
-| **Simulation** | Physics pricing models | FEA stress, thermal, modal analysis |
-| **Multi-viewport** | Single Three.js canvas | Quad-view, cross-sections, drawing views |
-| **Undo/redo** | None | Command pattern with full state snapshots |
-| **Real-time collaboration** | None | CRDT-based multi-user editing |
-| **Desktop app** | Browser-only | Tauri native shell with system GPU access |
+apps/
+├── desktop/               # Tauri 2 desktop application
+│   ├── src/               # React + TypeScript + Zustand + Three.js
+│   │   ├── api/tauri.ts   # 37 Tauri command wrappers (328 lines)
+│   │   └── store/         # Zustand store (1,062 lines) + serializer + tests
+│   └── src-tauri/         # Rust Tauri backend
+│       ├── commands.rs    # 37 Tauri command handlers (692 lines)
+│       └── main.rs        # Tauri builder + plugin registration
+└── e2e-tester/            # End-to-end test runner
+```
 
 ---
 
-## 3. Target Architecture Vision
+## 3. Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        MANUSHOP CAD/CAM EDITOR                              │
-│                    "Open-Source Fusion 360 Killer"                           │
+│                           r3ditor v0.2.0                                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐   │
-│  │  Tauri Shell │  │ egui Viewport│  │  React Panels│  │  Web (WASM)   │   │
-│  │  (Desktop)   │  │ (3D Canvas)  │  │  (Sidebar)   │  │  (Browser)    │   │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └───────┬───────┘   │
-│         │                 │                  │                   │           │
-│  ┌──────┴─────────────────┴──────────────────┴───────────────────┴───────┐   │
-│  │                     EDITOR SHELL (ECS Orchestrator)                   │   │
-│  │          Bevy-like ECS: Entities + Components + Systems               │   │
-│  │     ┌─────────────────────────────────────────────────────────┐       │   │
-│  │     │  Schedule: [Input] → [Constraint] → [Rebuild] → [Render]│      │   │
-│  │     └─────────────────────────────────────────────────────────┘       │   │
-│  └──────┬───────────────────┬──────────────────┬────────────────────┬────┘   │
-│         │                   │                  │                    │        │
-│  ┌──────┴───────┐  ┌───────┴──────┐  ┌────────┴──────┐  ┌─────────┴─────┐  │
-│  │  CAD Kernel  │  │ CAM Engine   │  │  DFM Analyzer │  │  Renderer     │  │
-│  │  ───────────  │  │ ────────────  │  │ ──────────── │  │ ──────────    │  │
-│  │ • B-Rep/NURBS │  │ • Toolpaths   │  │ • Wall thick │  │ • wgpu 28    │  │
-│  │ • Constraints │  │ • G-code gen  │  │ • Draft angle│  │ • PBR + IBL  │  │
-│  │ • Booleans    │  │ • Nesting     │  │ • Undercuts  │  │ • Shadows    │  │
-│  │ • Fillets     │  │ • Feeds/speeds│  │ • Estimator  │  │ • SSAO/Bloom │  │
-│  │ • History tree│  │ • Post-proc   │  │ • Sheet metal│  │ • GPU culling│  │
-│  └──────────────┘  └──────────────┘  └───────────────┘  └───────────────┘  │
-│         │                   │                  │                    │        │
-│  ┌──────┴───────────────────┴──────────────────┴────────────────────┴────┐   │
-│  │                      GPU COMPUTE LAYER (wgpu)                        │   │
-│  │  Tessellation │ BVH Build │ Boolean Ops │ FEA Solve │ Nesting Opt   │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
-│         │                   │                  │                    │        │
-│  ┌──────┴───────────────────┴──────────────────┴────────────────────┴────┐   │
-│  │                    PERSISTENCE + COLLABORATION                        │   │
-│  │    SQLite (local) │ PostgreSQL (cloud) │ CRDT Sync │ S3 Assets       │   │
-│  └──────────────────────────────────────────────────────────────────────┘   │
+│  ┌─────────────┐  ┌──────────────────┐  ┌──────────────┐                   │
+│  │  Tauri Shell │  │  React + Three.js│  │  Web (WASM)  │                   │
+│  │  (Desktop)   │  │  (Frontend UI)   │  │  (Browser)   │                   │
+│  └──────┬───────┘  └──────┬───────────┘  └───────┬──────┘                   │
+│         │   37 IPC         │ Zustand store        │                         │
+│         │   commands       │ + Tauri invoke()     │                         │
+│  ┌──────┴──────────────────┴──────────────────────┴──────────────────┐      │
+│  │                     EDITOR SHELL (ECS Orchestrator)               │      │
+│  │     World: entities, sketches, snap, clipboard, snapshots         │      │
+│  │     22 EditorCommand variants  ·  21 Tool types                   │      │
+│  │     ┌──────────────────────────────────────────────────────┐      │      │
+│  │     │  Pipeline: [Input] → [Solve] → [Rebuild] → [Render] │      │      │
+│  │     └──────────────────────────────────────────────────────┘      │      │
+│  └──────┬────────────────┬─────────────────┬──────────────────┬──────┘      │
+│         │                │                 │                  │              │
+│  ┌──────┴────────┐ ┌─────┴──────┐ ┌───────┴───────┐ ┌───────┴───────┐     │
+│  │  CAD Kernel   │ │ CAM Engine │ │ DFM Analyzer  │ │  Renderer     │     │
+│  │  ──────────── │ │ ────────── │ │ ──────────── │ │ ──────────    │     │
+│  │ • B-Rep/NURBS │ │ • Toolpaths│ │ • Wall thick │ │ • wgpu        │     │
+│  │ • 20 features │ │ • G-code   │ │ • Draft angle│ │ • Camera      │     │
+│  │ • Sketch ops  │ │ • Nesting  │ │ • Undercuts  │ │ • Scene       │     │
+│  │ • Snap engine │ │ • Sheet    │ │ • DFM scoring│ │ • Viewport    │     │
+│  │ • Tool system │ │ • 8 posts  │ │              │ │               │     │
+│  │ • Snapshot    │ │            │ │              │ │               │     │
+│  │ • TNS naming  │ │            │ │              │ │               │     │
+│  │ • History/Undo│ │            │ │              │ │               │     │
+│  └───────┬───────┘ └─────┬──────┘ └──────┬───────┘ └───────┬───────┘     │
+│          │               │               │                  │              │
+│  ┌───────┴───────────────┴───────────────┴──────────────────┴───────┐     │
+│  │               constraint-solver  +  shared-types                  │     │
+│  │     2D sketch (NR→LM→BFGS) + 3D assembly (iterative)            │     │
+│  └───────────────────────────────────────────────────────────────────┘     │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────┐       │
+│  │    plugin-runtime (Wasmtime WASM)  ·  wasm-meshkit (Browser)   │       │
+│  └─────────────────────────────────────────────────────────────────┘       │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -150,1342 +198,956 @@ This document defines the **optimal software architecture** for a brand-new open
 
 ## 4. Core Architecture — ECS + B-Rep Hybrid
 
-### 4.1 Why ECS for a CAD Editor
+### 4.1 ECS Data Model (editor-shell)
 
-Traditional CAD apps use monolithic object hierarchies. We use an **Entity-Component-System** pattern inspired by Bevy for:
-
-- **Parallel system scheduling** — constraint solving, tessellation, rendering run concurrently
-- **Cache-friendly memory layout** — components stored contiguously in SoA (struct-of-arrays)
-- **Decoupled logic** — new manufacturing processes = new systems, no touching existing code
-- **Hot-reload friendly** — reload WASM plugin systems at runtime without restarting
-
-### 4.2 ECS Data Model
+The `World` struct in `editor-shell/src/ecs.rs` is the central state container:
 
 ```rust
-// ─── Core Entity Archetypes ───
+pub struct World {
+    // Entity storage
+    pub entities: Vec<EditorEntity>,
+    pub history: HistoryManager,
 
-// A geometric body (part, assembly, sketch)
-struct BodyEntity {
-    id: Entity,
-    // Components:
-    brep: BRepTopology,         // Vertices, edges, faces, shells, solids
-    nurbs: NurbsGeometry,       // Curves & surfaces (parametric definition)
-    mesh: TriMesh,              // GPU-ready tessellation (generated)
-    transform: Transform3D,     // Position, rotation, scale
-    material: PhysicalMaterial, // Density, yield strength, hardness, etc.
-    appearance: Appearance,     // Color, texture, PBR params
-    history: FeatureHistory,    // Parametric feature tree
-    constraints: Constraints,   // Geometric & dimensional constraints
-    metadata: PartMetadata,     // Name, part number, revision
-}
+    // Sketch system (Blender/CAD_Sketcher integration)
+    pub sketches: HashMap<Uuid, Sketch>,
+    pub active_sketch: Option<Uuid>,
+    pub sketch_snapshots: ToolSnapshotManager,
+    pub clipboard: ClipboardBuffer,
 
-// A manufacturing job (CNC, laser, bend, etc.)
-struct ManufacturingEntity {
-    id: Entity,
-    body_ref: Entity,           // Link to the body
-    process: ManufacturingProcess,
-    material: SheetMaterial | CncMaterial,
-    estimation: QuoteEstimation,
-    toolpaths: Vec<Toolpath>,
-    gcode: Option<GCodeProgram>,
-    dfm_findings: Vec<DfmFinding>,
-}
-
-// A 2D sketch (lives on a plane or face)
-struct SketchEntity {
-    id: Entity,
-    plane: SketchPlane,
-    curves: Vec<SketchCurve>,   // Lines, arcs, splines, conics
-    constraints: Vec<SketchConstraint>, // Coincident, parallel, tangent, dimension
-    solved: bool,
+    // Snap system
+    pub snap_config: SnapConfig,
+    pub picking_map: PickingColorMap,
 }
 ```
 
-### 4.3 System Schedule (per frame)
+Each `EditorEntity` contains:
+
+```rust
+pub struct EditorEntity {
+    pub id: Uuid,
+    pub name: String,
+    pub brep: Option<BRepBody>,
+    pub mesh: Option<TriMesh>,
+    pub dirty: bool,
+    pub feature_tree: Vec<Feature>,
+    pub transform: Transform3D,
+    pub appearance: Appearance,
+    pub visible: bool,
+    pub locked: bool,
+}
+```
+
+World sketch methods: `create_sketch()`, `get_sketch()`, `get_sketch_mut()`, `active_sketch()`, `active_sketch_mut()`, `set_active_sketch()`, `remove_sketch()`, `list_sketches()`.
+
+### 4.2 Command System (22 Variants)
+
+All state mutations go through `EditorCommand` in `editor-shell/src/commands.rs`:
+
+| Command | Category | Description |
+|---------|----------|-------------|
+| `CreateBox` | Primitive | Create box with dimensions |
+| `CreateCylinder` | Primitive | Create cylinder with radius + height |
+| `ApplyFeature` | Modeling | Apply any of 20 feature kinds |
+| `DeleteEntity` | Editing | Remove entity from world |
+| `Undo` / `Redo` | History | Transaction-based undo/redo |
+| `ImportFile` | I/O | Import STEP/STL/OBJ |
+| `ExportFile` | I/O | Export to various formats |
+| `CreateSketch` | Sketch | Create new sketch on plane |
+| `DeleteSketch` | Sketch | Remove sketch |
+| `SetActiveSketch` | Sketch | Set active sketch for editing |
+| `AddSketchEntity` | Sketch | Add line/circle/arc/point/etc. |
+| `RemoveSketchEntity` | Sketch | Remove entity from sketch |
+| `AddSketchConstraint` | Sketch | Add constraint to sketch |
+| `RemoveSketchConstraint` | Sketch | Remove constraint |
+| `TrimSegment` | Sketch Ops | Trim segment at click point |
+| `BevelAtPoint` | Sketch Ops | Bevel/fillet at junction |
+| `OffsetPath` | Sketch Ops | Offset connected path |
+| `TakeSnapshot` | Snapshot | Save sketch state for tool undo |
+| `RestoreSnapshot` | Snapshot | Restore previous sketch state |
+| `CopyEntities` | Clipboard | Copy selection with dependencies |
+| `PasteEntities` | Clipboard | Paste with ID remapping + offset |
+
+### 4.3 Tool System (21 Tools)
+
+The `EditorApp` in `editor-shell/src/app.rs` manages an active `Tool` enum:
+
+```
+General:  Select, Move, Rotate, Scale, Sketch, Extrude, Revolve,
+          Fillet, Chamfer, Boolean, Measure, Section
+Sketch:   SketchLine, SketchCircle, SketchArc, SketchRectangle,
+          SketchTrim, SketchOffset, SketchBevel
+```
+
+Sketch tools are backed by the `ToolStateMachine` from `cad-kernel/src/tools.rs`, which implements the full Blender-inspired stateful operator lifecycle:
+
+- `activate_sketch_tool()` → creates tool + state machine
+- `send_tool_input()` → feeds mouse/keyboard events through state machine
+- `cancel_sketch_tool()` → cancels and rolls back
+- `compute_snap()` → runs snap engine for current cursor position
+- `sketch_tool_status()` → returns current state name + preview entities
+
+### 4.4 System Schedule (per frame)
 
 ```
 Frame N:
-  ┌─ Stage 1: INPUT ─────────────────────────────────┐
-  │  • Mouse/keyboard → pick/select/transform         │
-  │  • Sketch input → add/modify curves               │
-  │  • Command execution → push to history             │
-  │  • File import → deserialize into entities         │
-  └────────────────────────────────────────────────────┘
+  ┌─ Stage 1: INPUT ─────────────────────────────────────┐
+  │  • Mouse/keyboard → pick/select/transform             │
+  │  • Tool input → state machine progression              │
+  │  • Snap computation → visual feedback                  │
+  │  • Command execution → push to undo history            │
+  └────────────────────────────────────────────────────────┘
                          ↓
-  ┌─ Stage 2: SOLVE (parallel) ───────────────────────┐
-  │  • 2D constraint solver (Newton-Raphson)           │ ← Rayon par_iter
-  │  • 3D assembly constraint solver                   │ ← GPU compute
-  │  • Parametric history replay (if params changed)   │
-  └────────────────────────────────────────────────────┘
+  ┌─ Stage 2: SOLVE (parallel via Rayon) ─────────────────┐
+  │  • 2D constraint solver (NR → LM → BFGS → NR)         │
+  │  • 3D assembly constraint solver                       │
+  │  • Feature tree rebuild (if params changed)            │
+  └────────────────────────────────────────────────────────┘
                          ↓
-  ┌─ Stage 3: REBUILD (parallel) ─────────────────────┐
-  │  • B-Rep boolean operations                        │ ← GPU compute
-  │  • Fillet/chamfer generation                       │
-  │  • Tessellation (NURBS → triangles)                │ ← GPU compute
-  │  • BVH rebuild for ray-casting                     │ ← GPU compute
-  │  • DFM analysis (if geometry changed)              │ ← Rayon par_iter
-  │  • Cost re-estimation (if process/material changed)│
-  └────────────────────────────────────────────────────┘
+  ┌─ Stage 3: REBUILD (parallel via Rayon) ───────────────┐
+  │  • Feature execution (20 kinds)                        │
+  │  • B-Rep boolean operations                            │
+  │  • Tessellation (NURBS → triangles)                    │
+  │  • DFM analysis (if geometry changed)                  │
+  └────────────────────────────────────────────────────────┘
                          ↓
-  ┌─ Stage 4: RENDER ─────────────────────────────────┐
-  │  • Frustum culling (GPU)                           │
-  │  • Draw opaque pass (PBR, shadows)                 │
-  │  • Draw transparent pass                           │
-  │  • Edge overlay (wireframe, silhouette)            │
-  │  • Gizmo / handle overlay                          │
-  │  • UI overlay (egui)                               │
-  │  • Present frame                                   │
-  └────────────────────────────────────────────────────┘
+  ┌─ Stage 4: RENDER ─────────────────────────────────────┐
+  │  • Three.js scene update (via React state)             │
+  │  • Selection highlights + snap indicators              │
+  │  • Gizmo / handle overlay                              │
+  │  • UI (React components)                               │
+  └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 5. CAD Kernel Layer
 
-### 5.1 Dual-Kernel Strategy
+The `cad-kernel` crate is the largest (10,269 lines, 125 tests) and contains the core parametric modeling engine plus the sketch operation subsystems.
 
-| Kernel | Purpose | Tech | License |
-|--------|---------|------|---------|
-| **Truck** (primary) | Pure-Rust B-Rep/NURBS kernel | `truck-*` crate family | Apache 2.0 |
-| **OpenCascade** (secondary) | STEP/IGES import/export, advanced booleans | `opencascade-rs` 0.2 | LGPL-2.1 |
-| **Fornjot** (experimental) | Future pure-Rust replacement for OCCT | `fj-core` 0.49 | 0BSD |
+### 5.1 Module Structure
 
-### 5.2 Truck Crate Ecosystem (Pure Rust, WebGPU-native)
+| Module | Lines | Tests | Purpose |
+|--------|------:|------:|---------|
+| `operations.rs` | 2,050 | 60 | Feature execution engine — all 20 feature kinds |
+| `sketch_ops.rs` | 1,238 | 13 | Entity walker, trim, bevel, offset, bezier, intersections |
+| `tessellation.rs` | 1,291 | 11 | Mesh generation, quality metrics, smoothing, STL export |
+| `sketch.rs` | 882 | 4 | 2D sketch entities (7 types) + constraints (19 types) |
+| `brep.rs` | 869 | 4 | B-Rep body with full topological model |
+| `tools.rs` | 770 | 6 | Stateful tool framework + 4 built-in tools |
+| `document.rs` | 679 | 5 | Document model, EventBus, DependencyGraph |
+| `snap.rs` | 569 | 6 | Snap engine (7 snap types) + GPU PickingColorMap |
+| `naming.rs` | 534 | 5 | Topological Naming Service (5-priority cascade) |
+| `snapshot.rs` | 519 | 4 | SketchSnapshot, ToolSnapshotManager, ClipboardBuffer |
+| `features.rs` | 484 | 3 | Feature system (20 FeatureKinds) + attributes |
+| `history.rs` | 297 | 4 | Transaction-based undo/redo (OCAF pattern) |
+| `lib.rs` | 77 | 0 | Module declarations + 30+ public re-exports |
+
+### 5.2 B-Rep / NURBS Kernel (Truck-Based)
+
+The kernel uses the **Truck** crate family for B-Rep topology and NURBS geometry:
 
 ```toml
-# Core geometry
-truck-base       = "0.6"    # cgmath, tolerance, curve/surface traits
-truck-geotrait   = "0.6"    # ParametricCurve, ParametricSurface traits
-truck-geometry   = "0.6"    # KnotVec, BSpline, NURBS curves & surfaces
-truck-topology   = "0.6"    # Vertex, Edge, Wire, Face, Shell, Solid
-truck-modeling   = "0.6"    # Integrated modeling: extrude, revolve, sweep, loft
-truck-shapeops   = "0.6"    # Boolean operations (union, cut, intersect) on Solids
-truck-meshalgo   = "0.6"    # Tessellation, mesh generation from B-Rep
-truck-polymesh   = "0.6"    # Polygon mesh data structure + algorithms
-
-# Rendering (wgpu-native)
-truck-platform   = "0.6"    # wgpu abstraction, render pipelines
-truck-rendimpl   = "0.6"    # Shape + mesh visualization
-
-# Import/Export
-truck-stepio     = "0.6"    # STEP file read/write
-
-# Scripting / WASM
-truck-js         = "*"      # JavaScript/WASM bindings
+truck-geotrait = "0.6"   # ParametricCurve, ParametricSurface traits
+truck-topology = "0.6"   # Vertex, Edge, Wire, Face, Shell, Solid
+truck-modeling = "0.6"    # Extrude, revolve, sweep, loft
+truck-shapeops = "0.6"   # Boolean operations (union, cut, intersect)
+truck-meshalgo = "0.6"   # Tessellation from B-Rep
+truck-polymesh = "0.6"   # Polygon mesh data + algorithms
+truck-stepio   = "0.6"   # STEP file read/write
 ```
 
-### 5.3 Parametric Feature Tree
+### 5.3 Feature System (20 Kinds)
 
-```rust
-enum Feature {
-    Sketch2D {
-        plane: SketchPlane,
-        profile: ClosedWire,
-        constraints: Vec<SketchConstraint>,
-    },
-    Extrude {
-        profile: FeatureRef,    // → Sketch2D
-        distance: Parameter,    // Can be driven by a dimension
-        direction: ExtrudeDir,  // Blind, symmetric, to-face, through-all
-        draft_angle: Option<Angle>,
-    },
-    Revolve {
-        profile: FeatureRef,
-        axis: Axis,
-        angle: Parameter,
-    },
-    Fillet {
-        edges: Vec<EdgeRef>,
-        radius: Parameter,
-    },
-    Chamfer {
-        edges: Vec<EdgeRef>,
-        distance: Parameter,
-    },
-    BooleanOp {
-        op: BooleanType,    // Union, Cut, Intersect
-        tool: FeatureRef,
-        target: FeatureRef,
-    },
-    SheetMetalBend {
-        face: FaceRef,
-        bend_line: Wire,
-        angle: Parameter,
-        radius: Parameter,
-        k_factor: f64,
-    },
-    Pattern {
-        feature: FeatureRef,
-        pattern_type: PatternType, // Linear, circular, mirror
-        count: Parameter,
-        spacing: Parameter,
-    },
-    Shell {
-        faces_to_remove: Vec<FaceRef>,
-        thickness: Parameter,
-    },
-    Import {
-        format: FileFormat,
-        data: Vec<u8>,
-    },
-}
-```
+The `operations.rs` module (2,050 lines, 60 tests) implements all 20 feature kinds:
 
-### 5.4 Constraint Solver
+| Feature | Description |
+|---------|-------------|
+| `Extrude` | Sweep closed 2D profile along direction (blind/symmetric/to-face/through-all) |
+| `Revolve` | Sweep profile around axis by angle |
+| `Fillet` | Rolling-ball fillet on selected edges |
+| `Chamfer` | Distance or distance+angle chamfer on edges |
+| `BooleanUnion` | Union of two solids |
+| `BooleanCut` | Subtraction of tool from target |
+| `BooleanIntersect` | Intersection of two solids |
+| `Shell` | Hollow solid by removing faces and offsetting |
+| `LinearPattern` | Repeat feature along direction |
+| `CircularPattern` | Repeat feature around axis |
+| `Mirror` | Mirror feature across plane |
+| `Pipe` | Sweep profile along 3D path |
+| `Loft` | Create solid between two or more profiles |
+| `SheetMetalBend` | Bend with K-factor calculation |
+| `Hole` | Simple/counterbore/countersink/tapped holes |
+| `Draft` | Add draft angle to faces |
+| `Datum` (Plane/Axis/Point) | Reference geometry |
+| `Import` | Import external geometry |
 
-```
-2D Sketch Constraints (Newton-Raphson iterative solver):
-  • Coincident      — point-on-point, point-on-line, point-on-circle
-  • Horizontal      — line/segment parallel to X axis
-  • Vertical        — line/segment parallel to Y axis
-  • Parallel        — two lines parallel
-  • Perpendicular   — two lines at 90°
-  • Tangent         — line-to-arc, arc-to-arc
-  • Equal           — equal length/radius
-  • Symmetric       — mirror about a line
-  • Dimension       — distance, angle, radius (driving or driven)
-  • Fix             — lock point/line in place
+### 5.4 Topological Naming Service
 
-3D Assembly Constraints (iterative position solver):
-  • Mate (face flush)
-  • Align (axis collinear)
-  • Offset (face distance)
-  • Angle (between planes)
-  • Gear (rotational coupling)
-  • Tangent (surface-to-surface)
+`naming.rs` (534 lines, 5 tests) implements a 5-priority cascade for persistent references that survive model rebuilds:
 
-Solver tech: Rust implementation with Rayon parallelism for
-large systems, GPU fallback for >10K constraint equations.
-```
+1. **Exact match** by creation provenance (feature ID + creation type)
+2. **Filter by creation type** (ExtrudeSide, ExtrudeCap, BooleanFace, etc.)
+3. **Geometric signature matching** (surface type, centroid, normal, area)
+4. **Adjacency graph matching** (neighboring faces/edges)
+5. **Report unresolved** to user with re-link dialog
+
+### 5.5 Tessellation
+
+`tessellation.rs` (1,291 lines, 11 tests) provides:
+
+- Configurable chordal/angular deviation
+- Mesh quality analysis (`MeshQualityReport` — aspect ratio, min/max angle, skewness)
+- Laplacian + Taubin mesh smoothing (`SmoothingConfig`)
+- STL export (binary format)
+
+### 5.6 History / Undo System
+
+`history.rs` (297 lines, 4 tests) — Transaction-based undo/redo inspired by OCAF:
+
+- `HistoryManager::begin_transaction()` / `commit()` / `rollback()`
+- Full state snapshots per transaction
+- Undo stack with configurable depth
+
+### 5.7 Document Model
+
+`document.rs` (679 lines, 5 tests) provides:
+
+- `Document` — persistent document state with metadata
+- `EventBus` — publish/subscribe event system for inter-module communication
+- `DependencyGraph` — tracks feature dependencies for incremental rebuild
 
 ---
 
-## 6. CAM/Manufacturing Layer
+## 6. Sketch System & Blender/CAD_Sketcher Patterns
 
-### 6.1 Existing Physics Models (Preserved + Enhanced)
+This section documents the four modules added to `cad-kernel` that implement patterns extracted from Blender and CAD_Sketcher (see `BLENDER-CAD-SKETCHER-PATTERNS.md` for the original research).
 
-#### CNC Machining (from current `estimator.rs`)
+### 6.1 Sketch Entities & Constraints (`sketch.rs`)
+
+**7 Entity Types:**
+
+| Entity | Parameters | DOF |
+|--------|-----------|-----|
+| Point | x, y | 2 |
+| LineSegment | start(x,y), end(x,y) | 4 |
+| Circle | center(x,y), radius | 3 |
+| Arc | center(x,y), radius, start_angle, end_angle | 5 |
+| Rectangle | origin(x,y), width, height | 4 |
+| Ellipse | center, semi_major, semi_minor, rotation | 5 |
+| Spline | control_points, degree | 2N |
+
+**19 Constraint Types:**
+
+| Constraint | Description |
+|------------|-------------|
+| Coincident | Point-on-point or point-on-curve |
+| Horizontal / Vertical | Line parallel to axis |
+| Parallel / Perpendicular | Between two lines |
+| Tangent | Line-arc, arc-arc tangency |
+| Equal | Equal length or radius |
+| Symmetric | Mirror about line |
+| Concentric | Same center |
+| Midpoint | Point at midpoint of segment |
+| Distance | Point-point, point-line, line-line distance |
+| Angle | Angle between two lines |
+| Radius / Diameter | Circle/arc size |
+| Fix | Lock entity in place |
+| Collinear | Points on same line |
+| Ratio | Proportional distance |
+
+### 6.2 Sketch Operations (`sketch_ops.rs` — 1,238 lines, 13 tests)
+
+Implements the CAD_Sketcher entity walker, trim, bevel, offset, intersection, bezier, and mesh conversion algorithms.
+
+#### Entity Walker & Path Finding
+
+- `connection_points(entity)` — returns topological endpoints per entity type
+- `EntityWalker` — builds adjacency map via shared connection points
+- `find_paths(sketch)` — recursive path discovery, returns `Vec<SketchPath>`
+- `main_path(paths)` — finds the longest/closed path (for offset, conversion)
+
+#### Intersections
+
+- `intersect_entities(a, b)` — computes intersection points for:
+  - Line-line (parametric intersection + t-range check)
+  - Line-circle (quadratic formula, 0/1/2 solutions)
+  - Line-arc (same as line-circle + angle range filter)
+  - Circle-circle (radical line method)
+
+#### Trim (`trim_segment`)
+
+Algorithm: find all intersections with the target segment → sort by distance from click position → find bracketing pair → split segment → copy applicable constraints → remap references → clean up.
+
+Returns `TrimResult` with the new segment IDs.
+
+#### Bevel (`bevel_at_point`)
+
+Algorithm: find 2 connected segments at point → compute parallel offsets → intersect offsets to find arc center → project center onto segments for tangent points → create arc → add tangent constraints.
+
+Returns `BevelResult` with the new arc entity ID.
+
+#### Offset (`offset_path`)
+
+Algorithm: use EntityWalker to find connected path → compute parallel offset for each segment → intersect consecutive offsets for new junction points → create offset entities.
+
+Returns `OffsetResult` with the new entity IDs.
+
+#### Bezier Conversion
+
+- `to_bezier(entity)` — converts sketch entities to `CubicBezierSegment` sequences
+- `tessellate_bezier(segments, resolution)` — subdivides for display
+- Uses the optimal arc-to-cubic formula: `q = (4/3) × tan(π / (2n))`
+
+#### Sketch-to-Mesh
+
+- `sketch_profile_to_mesh(sketch)` — triangulates closed profiles via ear-clipping
+- Returns `TriMesh` suitable for GPU display
+
+### 6.3 Stateful Tool Framework (`tools.rs` — 770 lines, 6 tests)
+
+Implements the Blender `StatefulOperator` pattern as a Rust trait + state machine.
+
+#### Core Trait
+
+```rust
+pub trait StatefulTool: Send + Sync {
+    fn name(&self) -> &'static str;
+    fn states(&self) -> &[ToolStateDef];
+    fn handle_input(&mut self, state: usize, input: &ToolInput) -> ToolModalResult;
+    fn create_entity(&mut self, sketch: &mut Sketch, state: usize) -> Option<Uuid>;
+    fn finish(&mut self, sketch: &mut Sketch) -> Result<(), String>;
+    fn cancel(&mut self, sketch: &mut Sketch);
+    fn supports_continuous_draw(&self) -> bool;
+}
+```
+
+#### Tool Input / Result Enums
+
+- `ToolInput`: MouseMove, Click, Release, EntityHover, NumericInput, Tab, Escape, Enter, Undo
+- `ToolModalResult`: Running, NextState, Finished, Cancelled, ContinuousDraw
+- `ToolStateValue`: Entity, Coordinate, Number, None
+
+#### Built-In Tools
+
+| Tool | States | Continuous Draw | Description |
+|------|--------|:---------------:|-------------|
+| `LineTool` | 2 (start, end) | ✅ | Draw line segments; chains endpoints |
+| `CircleTool` | 2 (center, radius) | ❌ | Draw circles by center + radius point |
+| `ArcTool` | 3 (center, start, end) | ❌ | Draw arcs by center + start + end angle |
+| `RectangleTool` | 2 (corner, corner) | ❌ | Draw rectangles from two corners |
+
+#### ToolStateMachine
+
+Full modal lifecycle: `invoke()` → `prefill()` → modal loop (`handle_input()` → `advance_state()`) → `finish()` or `cancel()`. Supports continuous draw (chain drawing) for polyline-like workflows.
+
+#### Numeric Input
+
+`NumericInputState` provides per-axis text buffers — Tab cycles between X/Y substates, Enter confirms, Escape cancels.
+
+### 6.4 Snap Engine (`snap.rs` — 569 lines, 6 tests)
+
+Implements the Blender snap system with 7 snap types and GPU color-buffer entity picking.
+
+#### Snap Types (Priority Order)
+
+| Priority | Type | Radius | Description |
+|----------|------|--------|-------------|
+| 1 | Endpoint | 8 px | Snap to entity endpoints |
+| 2 | Midpoint | 8 px | Snap to segment midpoints |
+| 3 | Center | 8 px | Snap to circle/arc centers |
+| 4 | Intersection | 8 px | Snap to entity intersections |
+| 5 | Nearest | 6 px | Snap to nearest point on curve |
+| 6 | Grid | 4 px | Snap to grid intersections |
+| 7 | AxisAlignment | 3 px | Snap to axis-aligned positions |
+
+```rust
+pub struct SnapEngine;
+
+impl SnapEngine {
+    pub fn find_snap(
+        sketch: &Sketch,
+        cursor: Point2D,
+        config: &SnapConfig,
+    ) -> Option<SnapResult>;
+}
+```
+
+Algorithm: collect candidates from all enabled snap types → sort by priority then distance → return best match.
+
+#### GPU Picking Color Map
+
+```rust
+pub struct PickingColorMap {
+    entity_to_color: HashMap<Uuid, [u8; 3]>,
+    color_to_entity: HashMap<[u8; 3], Uuid>,
+}
+```
+
+- `register(entity_id)` — assigns unique RGB color
+- `resolve(color)` — maps color back to entity ID
+- `resolve_spiral(colors, center, size)` — Blender-style `PICK_SIZE=10` fuzzy search
+
+### 6.5 Snapshot / Clipboard (`snapshot.rs` — 519 lines, 4 tests)
+
+#### Sketch Snapshots
+
+`SketchSnapshot` captures full sketch state (entities + constraints + ordering + metadata) with:
+- `from_sketch()` / `restore_to_sketch()` — round-trip
+- `to_json()` / `from_json()` — JSON serialization
+- `to_bytes()` / `from_bytes()` — binary serialization
+
+#### Tool Snapshot Manager
+
+```rust
+pub struct ToolSnapshotManager {
+    stack: Vec<SketchSnapshot>,   // max depth: 50
+}
+```
+
+- `push_snapshot()` — save current sketch state
+- `pop_and_restore()` — restore previous state (in-tool Ctrl+Z)
+- `pop_snapshot()` — pop without restoring
+- `peek()` — inspect top of stack
+
+#### Clipboard with Dependency Resolution
+
+```rust
+pub struct ClipboardBuffer;
+```
+
+- `from_selection(sketch, selected_ids)` — resolves dependencies (entity → points, constraints → entities)
+- `paste_into(sketch, offset)` — remaps all UUIDs to avoid collisions, applies position offset
+- Returns list of newly created entity IDs
+
+---
+
+## 7. CAM / Manufacturing Layer
+
+The `cam-engine` crate (1,555 lines, 64 tests) provides CNC toolpath generation, G-code post-processing, 2D nesting, and sheet metal cutting/bending estimation.
+
+### 7.1 Module Structure
+
+| Module | Lines | Tests | Purpose |
+|--------|------:|------:|---------|
+| `toolpath.rs` | 628 | 26 | Roughing, finishing, drilling toolpath generation |
+| `gcode.rs` | 320 | 17 | G-code generation + 8 post-processors |
+| `nesting.rs` | 276 | 18 | 2D rectangular + true-shape nesting |
+| `sheet.rs` | 176 | 2 | Sheet metal (laser/plasma/waterjet, bend) |
+| `cnc.rs` | 141 | 1 | CNC physics models (Kienzle, Taylor, etc.) |
+
+### 7.2 Physics Models (Implemented)
 
 | Model | Formula | Application |
 |-------|---------|-------------|
 | **Kienzle** | $F_c = k_{c1.1} \cdot b \cdot h^{1-m_c}$ | Cutting force prediction |
-| **Power-limited MRR** | $MRR = \min(MRR_{geom}, \frac{P_{spindle} \cdot \eta}{k_c})$ | Material removal rate |
 | **Taylor** | $V \cdot T^n = C$ | Tool life prediction |
 | **Loewen-Shaw** | $\theta = \frac{0.754 \cdot \mu \cdot V \cdot F_c}{k \cdot \sqrt{l_c}}$ | Thermal analysis |
 | **Altintas** | $a_{lim} = \frac{-1}{2 K_f \cdot Re[G(j\omega_c)]}$ | Chatter stability |
-| **Surface finish** | $R_a = \frac{f^2}{32 \cdot r_{nose}}$ | Ra prediction |
+| **Surface Roughness** | $R_a = \frac{f^2}{32 \cdot r_{nose}}$ | Ra prediction |
+| **Fiber Laser** | $v = \frac{P}{t^{1.6}} \cdot k_{mat}$ | Laser cutting speed |
+| **Plasma** | $v = \frac{I}{t^{0.8}} \cdot k_{mat}$ | Plasma cutting speed |
+| **Waterjet** | $v = \frac{P}{t^{1.2} \cdot H_{BHN}} \cdot k_{mat}$ | Waterjet cutting speed |
+| **Press Brake** | $T = \frac{C \cdot L \cdot t^2 \cdot \sigma_u}{W \cdot 1000}$ | Bending tonnage |
+| **Bend Allowance** | $BA = (\frac{\pi}{180}) \cdot \theta \cdot (r + k \cdot t)$ | Flat pattern |
+| **Springback** | $\alpha_{actual} = \alpha_{target} + \frac{\sigma_y \cdot t}{2 \cdot E \cdot r}$ | Bend correction |
 
-#### Sheet Metal Cutting (from current `sheet_estimator.rs`)
+### 7.3 G-Code Post-Processors (8 Built-In)
 
-| Method | Speed Model | Application |
-|--------|-------------|-------------|
-| **Fiber Laser** | $v = \frac{P}{t^{1.6}} \cdot k_{mat}$ | High-speed thin metal |
-| **CO₂ Laser** | $v = \frac{P}{t^{1.6}} \cdot k_{mat} \cdot 0.75$ | Thick steel, non-metals |
-| **Plasma** | $v = \frac{I}{t^{0.8}} \cdot k_{mat}$ | Heavy plate cutting |
-| **Waterjet** | $v = \frac{P}{t^{1.2} \cdot H_{BHN}} \cdot k_{mat}$ | No HAZ, any material |
+Fanuc, Haas, Mazak, Siemens, LinuxCNC, Grbl, Marlin, Klipper
 
-#### Press Brake Bending (from current `sheet_estimator.rs`)
+Custom post-processors can be added as WASM plugins via the `PostProcessor` trait.
 
-| Parameter | Formula |
-|-----------|---------|
-| **Tonnage** | $T = \frac{C \cdot L \cdot t^2 \cdot \sigma_u}{W \cdot 1000}$ |
-| **Bend allowance** | $BA = (\frac{\pi}{180}) \cdot \theta \cdot (r + k \cdot t)$ |
-| **Springback** | $\alpha_{actual} = \alpha_{target} + \frac{\sigma_y \cdot t}{2 \cdot E \cdot r}$ |
+### 7.4 Materials Catalog
 
-### 6.2 New CAM Capabilities
+**17 Sheet Materials** with full physical properties: DC01, DX51D+Z275, S355MC, AISI 304 2B, AISI 316L, Aluminum 5754-H22/6082-T6/1050-H24, Copper C11000, Brass CuZn37, Titanium Grade 2, Corten A, Hardox 400, DC04 Deep Draw, Spring Steel CK75, Mu-Metal, Hastelloy C-276.
 
-```
-Toolpath Generation Pipeline:
-  ┌─ B-Rep geometry ──────────────────────────────────────┐
-  │                                                        │
-  ├─→ CNC Milling                                         │
-  │   ├─ Roughing: Adaptive clearing (Trochoidal/HSM)     │
-  │   ├─ Semi-finish: Constant stepover waterline          │
-  │   ├─ Finish: Parallel, spiral, pencil, scallop         │
-  │   ├─ Drilling: Peck, chip-break, deep-hole             │
-  │   └─ G-code post-processor (Fanuc, Haas, Mazak, etc.) │
-  │                                                        │
-  ├─→ Sheet Metal Cutting                                  │
-  │   ├─ 2D nesting (rectangular + true-shape NFP)         │
-  │   ├─ Lead-in/lead-out strategies                       │
-  │   ├─ Kerf compensation                                 │
-  │   ├─ Tab/micro-joint placement                         │
-  │   ├─ Common-line cutting optimization                  │
-  │   └─ NC code generation (G-code, EIA, ESSI)           │
-  │                                                        │
-  ├─→ Bending                                              │
-  │   ├─ Bend sequence optimization                        │
-  │   ├─ Collision detection (tool/part interference)      │
-  │   ├─ Flat pattern generation                           │
-  │   └─ Press brake program generation                    │
-  │                                                        │
-  └─→ 3D Printing (future)                                 │
-      ├─ Slicing (adaptive layer height)                   │
-      ├─ Support generation                                │
-      ├─ Infill patterns                                   │
-      └─ G-code (Marlin, Klipper)                          │
-  └────────────────────────────────────────────────────────┘
-```
-
-### 6.3 17 Sheet Materials + 6 CNC Materials (Current Catalog)
-
-**Sheet Materials:**
-
-| ID | Material | Group | Available Thicknesses (in) |
-|----|----------|-------|---------------------------|
-| `al5052` | Aluminum 5052-H32 | Aluminum | 0.032 – 0.250 |
-| `al6061` | Aluminum 6061-T6 | Aluminum | 0.040 – 0.250 |
-| `al7075` | Aluminum 7075-T6 | Aluminum | 0.040 – 0.190 |
-| `mild_steel` | Mild Steel A36 | Steel | 0.030 – 0.500 |
-| `ar500` | AR500 Armor Steel | Steel | 0.188 – 0.500 |
-| `spring_1075` | Spring Steel 1075 | Steel | 0.015 – 0.125 |
-| `steel_1095` | High Carbon 1095 | Steel | 0.025 – 0.125 |
-| `ss304_sheet` | Stainless 304 | Stainless | 0.024 – 0.250 |
-| `ss316_sheet` | Stainless 316L | Stainless | 0.030 – 0.250 |
-| `ti_grade2` | Titanium Grade 2 | Titanium | 0.020 – 0.125 |
-| `ti_grade5` | Titanium Grade 5 | Titanium | 0.032 – 0.190 |
-| `copper_110` | Copper 110 | Copper/Brass | 0.021 – 0.125 |
-| `brass_260` | Brass 260 | Copper/Brass | 0.025 – 0.125 |
-| `carbon_fiber` | Carbon Fiber | Composites | 0.020 – 0.125 |
-| `acrylic_clear` | Clear Acrylic | Plastics | 0.060 – 0.500 |
-| `polycarbonate` | Polycarbonate | Plastics | 0.060 – 0.250 |
-| `neoprene` | Neoprene Rubber | Rubber | 0.063 – 0.250 |
-
-**CNC Materials:**
-
-| ID | Material | Density (g/cm³) | Yield (MPa) | Machinability |
-|----|----------|-----------------|-------------|---------------|
-| `al6061` | Aluminum 6061-T6 | 2.71 | 276 | Excellent |
-| `al7075` | Aluminum 7075-T6 | 2.81 | 503 | Good |
-| `ss304` | Stainless 304 | 8.00 | 215 | Moderate |
-| `steel1018` | Steel 1018 | 7.87 | 370 | Good |
-| `ti64` | Titanium 6Al-4V | 4.43 | 880 | Difficult |
-| `pom` | POM/Delrin | 1.41 | 69 | Excellent |
+**6 CNC Materials**: Aluminum 6061-T6, 7075-T6; Steel 1045, 4140; Stainless 316L; Titanium Ti-6Al-4V — each with specific cutting force, machinability index, and thermal properties.
 
 ---
 
-## 7. GPU Acceleration Pipeline
+## 8. Constraint Solver
 
-### 7.1 GPU Compute Strategy
+The `constraint-solver` crate (1,915 lines, 30 tests) provides both 2D sketch and 3D assembly constraint solving.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    GPU COMPUTE (wgpu 28)                     │
-│                                                              │
-│  Backend Selection (auto-detected):                          │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐   │
-│  │ Vulkan   │ │ Metal    │ │ DX12     │ │ WebGPU       │   │
-│  │ (Linux/  │ │ (macOS/  │ │ (Windows)│ │ (Browser/    │   │
-│  │ Windows) │ │  iOS)    │ │          │ │  WASM)       │   │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────────┘   │
-│                                                              │
-│  Compute Shaders (WGSL):                                     │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │  tessellation.wgsl   — NURBS → triangle mesh        │    │
-│  │  bvh_build.wgsl      — BVH tree construction        │    │
-│  │  raytrace.wgsl       — Ray-triangle intersection    │    │
-│  │  boolean_ops.wgsl    — CSG union/cut/intersect      │    │
-│  │  nesting.wgsl        — 2D part nesting optimization │    │
-│  │  toolpath.wgsl       — Parallel toolpath offset      │    │
-│  │  fea_solve.wgsl      — FEA matrix assembly + solve  │    │
-│  │  collision.wgsl      — Interference detection        │    │
-│  │  culling.wgsl        — Frustum + occlusion culling  │    │
-│  │  sdf_eval.wgsl       — Signed distance field eval   │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                              │
-│  Memory Management:                                          │
-│  • Persistent GPU buffers for active model (~256MB budget)   │
-│  • Double-buffered vertex/index for zero-stall rendering     │
-│  • Staging ring-buffer for CPU→GPU uploads                   │
-│  • Readback buffer pool for GPU→CPU results                  │
-│  • Bindless textures via storage buffer arrays               │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
+### 8.1 2D Sketch Solver (`solver2d.rs` — 859 lines)
 
-### 7.2 WGSL Shader Budget
+Four-stage cascade solver:
 
-| Shader | Workgroup | Dispatch Strategy | Latency Target |
-|--------|-----------|-------------------|----------------|
-| `tessellation` | 256×1×1 | 1 dispatch per NURBS patch | < 2ms for 1M tris |
-| `bvh_build` | 128×1×1 | Radix sort + LBVH | < 5ms for 1M tris |
-| `raytrace` | 8×8×1 | Per-pixel for picking/AO | < 1ms per ray batch |
-| `boolean_ops` | 256×1×1 | Per-face pair classification | < 50ms for complex booleans |
-| `nesting` | 64×1×1 | Per-candidate-rotation evaluation | < 100ms for 50 parts |
-| `fea_solve` | 256×1×1 | Conjugate gradient iterations | < 2s for 100K DOF |
-| `culling` | 64×1×1 | Per-instance visibility | < 0.1ms |
+1. **DogLeg** trust-region method (fastest, handles most cases)
+2. **Levenberg-Marquardt** fallback (robust for near-singular Jacobians)
+3. **BFGS** quasi-Newton (for complex constraint graphs)
+4. **Newton-Raphson** with line search (final fallback)
 
-### 7.3 GPU Pipeline Architecture
+Supports all 19 constraint types. Includes real-time dragging (tweak) — temporarily adds a coincident constraint at mouse position.
 
-```
-                    ┌──────────────────┐
-                    │  APPLICATION     │
-                    │  (ECS Systems)   │
-                    └────────┬─────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              ▼              ▼              ▼
-    ┌─────────────┐ ┌──────────────┐ ┌──────────────┐
-    │  COMPUTE    │ │  COMPUTE     │ │  COMPUTE     │
-    │  PASS 1     │ │  PASS 2      │ │  PASS 3      │
-    │ Tessellate  │ │ BVH Build    │ │ Culling      │
-    │ + Normals   │ │ + Raytrace   │ │ + Sort       │
-    └──────┬──────┘ └──────┬───────┘ └──────┬───────┘
-           │               │                │
-           └───────────────┼────────────────┘
-                           ▼
-              ┌────────────────────────┐
-              │    RENDER PASS         │
-              │  ┌──────────────────┐  │
-              │  │ Depth Pre-pass   │  │
-              │  │ Shadow Maps      │  │
-              │  │ G-Buffer (PBR)   │  │
-              │  │ Lighting         │  │
-              │  │ SSAO + Bloom     │  │
-              │  │ Edge Detection   │  │
-              │  │ AA (TAA/FXAA)    │  │
-              │  │ Gizmo Overlay    │  │
-              │  │ UI Overlay (egui)│  │
-              │  └──────────────────┘  │
-              └────────┬───────────────┘
-                       ▼
-              ┌────────────────────┐
-              │   PRESENT          │
-              │   (Swap Chain)     │
-              └────────────────────┘
-```
+### 8.2 3D Assembly Solver (`solver3d.rs` — 890 lines, 22 tests)
 
----
+Constraint types: Mate, Align, Offset, Angle, Fixed.
 
-## 8. Multicore Parallelism Strategy
+Iterative position solver for rigid body assembly.
 
-### 8.1 Three-Level Parallelism
+### 8.3 Solver Types (`types.rs` — 147 lines, 6 tests)
 
-```
-Level 1: SYSTEM PARALLELISM (ECS schedule)
-  ┌───────────────────────────────────────────────────┐
-  │  Independent systems run concurrently:              │
-  │  Thread 0: Constraint solver                        │
-  │  Thread 1: DFM analysis                             │
-  │  Thread 2: Cost estimation                          │
-  │  Thread 3: Undo history snapshot                    │
-  │  Thread 4: File auto-save                           │
-  │  Thread 5: Network sync (CRDT)                      │
-  │  Threads 6-N: Render preparation                    │
-  └───────────────────────────────────────────────────┘
-
-Level 2: DATA PARALLELISM (Rayon)
-  ┌───────────────────────────────────────────────────┐
-  │  Within a single system, parallel over data:        │
-  │  • par_iter() over faces for tessellation           │
-  │  • par_iter() over edges for fillet generation      │
-  │  • par_iter() over parts for DFM checks             │
-  │  • par_iter() over materials for cost estimation     │
-  │  • par_bridge() to chain GPU readback into CPU work │
-  └───────────────────────────────────────────────────┘
-
-Level 3: GPU PARALLELISM (wgpu compute shaders)
-  ┌───────────────────────────────────────────────────┐
-  │  Massively parallel over geometry primitives:       │
-  │  • 256 threads per workgroup × thousands of groups  │
-  │  • NURBS evaluation: 1 thread per sample point      │
-  │  • BVH: 1 thread per triangle for LBVH              │
-  │  • Boolean: 1 thread per face-pair classification   │
-  │  • Nesting: 1 thread per candidate placement        │
-  └───────────────────────────────────────────────────┘
-```
-
-### 8.2 Async I/O (Tokio)
-
-```rust
-// Non-blocking I/O for file operations, network, database
-#[tokio::main]
-async fn main() {
-    // File import runs async, doesn't block viewport
-    let model = tokio::spawn(async { import_step("part.step").await });
-    
-    // Cloud sync runs in background
-    let sync = tokio::spawn(async { crdt_sync_loop().await });
-    
-    // Redis stream consumer for remote analysis jobs
-    let worker = tokio::spawn(async { redis_consumer_loop().await });
-    
-    // Main thread runs the ECS + render loop
-    run_editor_loop().await;
-}
-```
-
-### 8.3 Thread Budget (Target: 16-core Machine)
-
-| Thread Pool | Threads | Purpose |
-|-------------|---------|---------|
-| **Rayon global** | N-2 (14) | Data-parallel geometry processing |
-| **Tokio runtime** | 4 | Async I/O (file, network, DB) |
-| **Render thread** | 1 (dedicated) | wgpu command encoding + submit |
-| **Main thread** | 1 | ECS schedule, input, UI |
-| **GPU** | — | Thousands of shader invocations |
+`SolveResult` enum: Ok, Inconsistent, Redundant, TooManyUnknowns, Failed.
 
 ---
 
 ## 9. Rendering Engine
 
-### 9.1 Render Pipeline
+The `renderer` crate (553 lines, 6 source files) provides the wgpu-based rendering infrastructure:
 
-| Pass | Description | GPU Cost |
-|------|-------------|----------|
-| **Z Pre-pass** | Early depth, enables Hi-Z culling | Low |
-| **Shadow Maps** | Cascaded shadow maps (4 cascades) | Medium |
-| **G-Buffer** | Albedo, normal, metallic-roughness, emission | Medium |
-| **Deferred Lighting** | PBR (Cook-Torrance BRDF), IBL, point/spot/directional | Medium |
-| **SSAO** | Screen-space ambient occlusion (GTAO variant) | Low |
-| **Edge Detection** | Sobel on depth + normal for CAD-style wireframe | Low |
-| **Silhouette** | Geometry shader / screen-space edge detection | Low |
-| **Bloom** | High dynamic range glow (13-pass progressive) | Low |
-| **TAA** | Temporal anti-aliasing with jitter + history | Low |
-| **Gizmo Overlay** | Transform handles, dimension labels, snapping indicators | Minimal |
-| **egui Overlay** | Immediate-mode UI (toolbars, panels, property sheets) | Minimal |
+| Module | Lines | Purpose |
+|--------|------:|---------|
+| `camera.rs` | 167 | View + projection matrices, orbit controls |
+| `pipeline.rs` | 127 | Render passes, pipeline state |
+| `scene.rs` | 112 | Scene graph, render objects |
+| `viewport.rs` | 74 | Viewport resize, aspect ratio |
+| `gpu.rs` | 50 | wgpu device, queue management |
 
-### 9.2 Visual Modes
-
-```
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│  SHADED     │ │  WIREFRAME  │ │  X-RAY      │ │  TECHNICAL  │
-│  PBR+Shadow │ │  Edges only │ │  Transparent │ │  Drawing    │
-│  Full color │ │  + silhouette│ │  + edges    │ │  Orthogonal │
-└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
-
-┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-│  DFM        │ │  STRESS     │ │  TOOLPATH   │ │  SECTION    │
-│  Color-coded│ │  FEA heatmap│ │  Show paths │ │  Cross-cut  │
-│  by finding │ │  von Mises  │ │  + simulate │ │  clipping   │
-└─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
-```
-
-### 9.3 Tech Stack for Rendering
-
-```toml
-# Rendering dependencies
-wgpu          = "28.0"     # Cross-platform GPU (Vulkan/Metal/DX12/WebGPU)
-naga          = "28.0"     # Shader translation (WGSL → SPIR-V/MSL/HLSL)
-egui          = "0.31"     # Immediate-mode GUI for viewport overlays
-egui-wgpu     = "0.31"     # egui backend for wgpu
-egui-winit    = "0.31"     # egui input adapter for winit
-winit         = "0.30"     # Cross-platform windowing
-glam          = "0.29"     # Fast math (SSE/NEON SIMD) — vec2/3/4, mat3/4, quat
-image         = "0.25"     # Texture loading (PNG, JPEG, HDR, EXR)
-```
+> **Note:** The desktop app currently uses **Three.js** (via React Three Fiber) for the 3D viewport rather than the native wgpu renderer. The `renderer` crate exists as foundation for a 🔮 future native viewport. The current 3D rendering path is: Tauri backend computes geometry → serializes mesh data to frontend → Three.js renders.
 
 ---
 
 ## 10. User Interface / UX Layer
 
-### 10.1 Dual UI Strategy
+### 10.1 Frontend Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    DESKTOP (Tauri 2.x)                       │
-│                                                              │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              Native Title Bar + Menu                 │    │
-│  ├─────────────────┬───────────────────────────────────┤    │
-│  │  TREE VIEW      │        3D VIEWPORT                │    │
-│  │  (React)        │        (egui + wgpu)              │    │
-│  │  ─────────      │        ─────────────              │    │
-│  │  ☰ History      │        [Rendered 3D scene]        │    │
-│  │  ├─ Sketch 1    │        [Gizmos + handles]         │    │
-│  │  ├─ Extrude     │        [Selection highlights]     │    │
-│  │  ├─ Fillet      │        [Dimension annotations]    │    │
-│  │  ├─ Cut         │        [Toolbar — egui]           │    │
-│  │  └─ Shell       │                                   │    │
-│  │                  │                                   │    │
-│  │  ☰ Assembly     │                                   │    │
-│  │  ├─ Part A      │                                   │    │
-│  │  └─ Part B      │                                   │    │
-│  │                  │                                   │    │
-│  │  ☰ Manufacturing│                                   │    │
-│  │  ├─ CNC Setup   │                                   │    │
-│  │  ├─ Laser Cut   │                                   │    │
-│  │  └─ Bending     │                                   │    │
-│  ├─────────────────┼───────────────────────────────────┤    │
-│  │  PROPERTIES     │  TIMELINE / COMMAND LOG            │    │
-│  │  (React)        │  (React)                           │    │
-│  └─────────────────┴───────────────────────────────────┘    │
-│                                                              │
-│  React panels communicate with Rust core via Tauri IPC      │
-│  3D viewport is a raw wgpu surface owned by Rust            │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+apps/desktop/src/
+├── api/
+│   └── tauri.ts           # 37 Tauri invoke() wrappers + TypeScript interfaces
+├── store/
+│   └── editorStore.ts     # Zustand store (1,062 lines) — Fusion 360-style state
+├── components/            # React components
+└── App.tsx                # Root application component
 ```
 
-### 10.2 Web Version (WASM)
+### 10.2 Zustand Store (Fusion 360-Style)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    BROWSER (WASM)                             │
-│                                                              │
-│  React 18 (host page, panels, menus)                        │
-│   + <canvas> with wgpu WebGPU surface (viewport)            │
-│   + egui-web for in-viewport overlays                        │
-│                                                              │
-│  Shared Rust core compiled to wasm32-unknown-unknown:        │
-│  • truck-* geometry kernel                                   │
-│  • wasm-meshkit (STL parse, simplify, DFM)                  │
-│  • Constraint solver                                         │
-│  • Estimator (pricing)                                       │
-│  • egui (immediate-mode viewport UI)                         │
-│                                                              │
-│  Heavy operations offloaded to server workers:               │
-│  • STEP import (OpenCascade — not WASM-portable)            │
-│  • Full FEA simulation                                       │
-│  • CNC toolpath generation                                   │
-│  • True-shape nesting optimization                           │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+The `editorStore.ts` models a complete professional CAD UX:
+
+**Workspaces:** Design, Assembly, Drawing (Fusion 360 workspace tabs)
+
+**Tool Palette per Workspace:**
+- Design workspace: 18 tools (sketch, extrude, revolve, fillet, chamfer, boolean, shell, pattern, mirror, pipe, loft, hole, draft, measure, section, import, export, appearance)
+- Assembly workspace: 28 tools (joint types, motion links, rigid groups, interference checks, exploded views)
+- Drawing workspace: 8 tools (projected/section/detail/break views, dimensions, annotations, title block)
+
+**Kernel-Backed Sketch State (synchronized via Tauri IPC):**
+
+```typescript
+kernelSketches: SketchInfo[]
+activeKernelSketchId: string | null
+kernelSketchEntities: SketchEntityInfo[]
+kernelSketchConstraints: ConstraintInfo[]
+kernelSketchPaths: SketchPathInfo[]
+snapResult: SnapResultInfo | null
+kernelToolStatus: ToolStatusInfo | null
+sketchSnapshotDepth: number
 ```
 
-### 10.3 UI Framework Stack
+**Additional State:**
+- Parametric timeline (feature tree with drag-to-reorder)
+- Browser tree (22 node types for features, bodies, sketches, datums, etc.)
+- Marking menus (right-click context menus)
+- Section planes (live cross-section cutting)
+- Box selection (window + crossing modes)
+- Snap toggles (grid, endpoint, midpoint, center, intersection, axis)
+- Navigation style picker (Fusion/SolidWorks/Blender/OnShape/Inventor)
 
-```toml
-# Desktop shell
-tauri        = "2.2"        # Native window, system tray, file dialogs
-tauri-plugin-store = "2.0"  # Local settings persistence
+### 10.3 TypeScript API Layer (`tauri.ts` — 328 lines)
 
-# In-viewport immediate-mode UI (Rust)
-egui         = "0.31"       # Panels, toolbars, property sheets inside 3D view
-egui-gizmo   = "0.18"       # 3D transform gizmos (translate, rotate, scale)
+All 37 Tauri IPC commands are wrapped with TypeScript interfaces:
 
-# Panel / sidebar UI (Web technologies via Tauri webview)
-react        = "18.3"       # Component framework
-typescript   = "5.6"        # Type safety
-tailwindcss  = "3.4"        # Utility CSS
-framer-motion = "11.11"     # Smooth animations
-lucide-react = "0.460"      # Icons
-@react-three/fiber = "8.17" # 3D preview thumbnails (optional)
+```typescript
+interface SketchInfo { id: string; name: string; entity_count: number; constraint_count: number }
+interface SketchEntityInfo { id: string; entity_type: string; data: string }
+interface ConstraintInfo { id: string; constraint_type: string; data: string }
+interface SketchPathInfo { entities: string[]; is_cyclic: boolean }
+interface SnapResultInfo { position: [number, number]; snap_type: string; source_entity?: string }
+interface ToolStatusInfo { state_name: string; state_index: number; total_states: number }
 ```
 
-### 10.4 Keyboard Shortcuts & Command Palette
+### 10.4 Frontend Test Coverage (319 Passing)
+
+| Test File | Cases | Description |
+|-----------|------:|-------------|
+| `editorStore.test.ts` | 64 | Full Zustand store coverage |
+| `callicat3dModel.test.ts` | 98 | 3D model operations |
+| `expressionEngine.test.ts` | 60 | Parametric expression engine |
+| `autoConstraints.test.ts` | 29 | Automatic constraint inference |
+| `sketchConstraints.test.ts` | 14 | Sketch constraint solver |
+| `SketchAnnotations.test.ts` | 12 | Dimension annotations |
+| `ViewportFeatures.test.ts` | 12 | Viewport interaction |
+| `NavigationStylePicker.test.ts` | 8 | Navigation style switching |
+| `callicatWorkflow.test.ts` | 8 | End-to-end workflows |
+| `shortcutConflicts.test.ts` | 7 | Keyboard shortcut resolution |
+| `callicatGenerateSTL.test.ts` | 5 | STL export flow |
+| **Total** | **317+** | |
+
+---
+
+## 11. Desktop Application (Tauri Bridge)
+
+### 11.1 Architecture
 
 ```
-CAD Modeling:
-  S         → Start Sketch (on face)
-  E         → Extrude
-  R         → Revolve
-  F         → Fillet
-  C         → Chamfer
-  B         → Boolean (union/cut/intersect)
-  H         → Shell (hollow)
-  M         → Mirror
-  P         → Pattern (linear/circular)
-  Ctrl+Z    → Undo
-  Ctrl+Y    → Redo
-  Ctrl+S    → Save
-  Ctrl+Shift+S → Save As
+React Component → invoke("command_name", { args }) → Tauri IPC
+    → src-tauri/commands.rs handler
+    → editor-shell / cad-kernel / cam-engine
+    → serialize result to JSON
+    → return to React
+```
 
-Navigation:
-  MMB Drag  → Orbit
-  Scroll    → Zoom
-  Shift+MMB → Pan
-  Numpad    → Standard views (Front/Back/Left/Right/Top/Bottom/Iso)
-  F         → Fit All
-  Z         → Zoom to Selection
+### 11.2 Registered Commands (37 Total)
 
-Manufacturing:
-  Ctrl+M    → New Manufacturing Setup
-  Ctrl+G    → Generate G-code
-  Ctrl+N    → Nest Parts
-  Ctrl+Q    → Get Quote
+| Category | Commands |
+|----------|----------|
+| **Primitives** | `create_box`, `create_cylinder` |
+| **Entities** | `list_entities`, `delete_entity` |
+| **History** | `undo`, `redo` |
+| **File I/O** | `import_file`, `export_stl`, `export_step` |
+| **Analysis** | `analyze_dfm`, `get_mesh_data`, `get_mesh_quality` |
+| **Sketch CRUD** | `create_sketch`, `delete_sketch`, `list_sketches`, `set_active_sketch`, `get_active_sketch` |
+| **Sketch Entities** | `add_sketch_entity`, `remove_sketch_entity`, `list_sketch_entities`, `get_sketch_entity`, `list_entity_connections`, `get_sketch_paths` |
+| **Sketch Operations** | `trim_sketch_entity`, `bevel_sketch_point`, `offset_sketch_path` |
+| **Snap** | `compute_snap`, `configure_snap` |
+| **Clipboard** | `copy_sketch_entities`, `paste_sketch_entities` |
+| **Snapshot** | `take_sketch_snapshot`, `restore_sketch_snapshot` |
+| **Tool System** | `activate_sketch_tool`, `send_tool_input` |
+| **Constraints** | `add_sketch_constraint`, `remove_sketch_constraint` |
+| **Path Analysis** | `get_sketch_main_path` |
 
-  Ctrl+Shift+P → Command Palette (fuzzy search all commands)
+### 11.3 State Management Pattern
+
+The Tauri backend holds a `Mutex<EditorApp>` (from `editor-shell`) as shared state. Each command handler:
+
+1. Locks the `EditorApp`
+2. Dispatches an `EditorCommand` (or calls kernel methods directly for queries)
+3. Serializes the result to JSON
+4. Returns to the frontend
+
+The frontend Zustand store calls Tauri `invoke()` and updates local state from the response.
+
+### 11.4 Build
+
+```bash
+# Development
+cd apps/desktop && npx tauri dev
+
+# Release build (debug, no bundle)
+cd apps/desktop && npx tauri build --debug --no-bundle
+
+# Standalone executable
+target\debug\r3ditor-desktop.exe   # ~14.8 MB
 ```
 
 ---
 
-## 11. File Format & Data Exchange
+## 12. File Format & Data Exchange
 
-### 11.1 Native Format
-
-```
-.manu — ManuShop native project file
-  ├─ manifest.json         — Version, metadata, dependencies
-  ├─ bodies/
-  │   ├─ part-001.brep     — B-Rep topology + geometry (truck binary format)
-  │   ├─ part-001.mesh     — Tessellated mesh cache
-  │   └─ part-001.params   — Parametric feature tree (JSON)
-  ├─ assemblies/
-  │   └─ main.asm          — Assembly structure + constraints
-  ├─ manufacturing/
-  │   ├─ setup-001.json    — Process, material, machine config
-  │   ├─ toolpath-001.tp   — Computed toolpath (binary)
-  │   └─ quote-001.json    — Estimation breakdown
-  ├─ sketches/
-  │   └─ sketch-001.svg    — 2D sketch (importable/exportable)
-  ├─ thumbnails/
-  │   └─ preview.png       — 256×256 preview
-  └─ history/
-      └─ undo-stack.bin    — Full undo history (binary diff)
-```
-
-### 11.2 Import/Export Matrix
+### 12.1 Import/Export Matrix (Implemented)
 
 | Format | Import | Export | Engine | Notes |
-|--------|--------|--------|--------|-------|
-| **STEP** (.step/.stp) | ✅ | ✅ | OpenCascade (server) + truck-stepio | AP214, AP242 |
-| **IGES** (.igs/.iges) | ✅ | ✅ | OpenCascade | Legacy format |
-| **STL** (.stl) | ✅ | ✅ | wasm-meshkit (client) | ASCII + binary |
+|--------|:------:|:------:|--------|-------|
+| **STEP** (.step/.stp) | ✅ | ✅ | truck-stepio | AP214 |
+| **STL** (.stl) | ✅ | ✅ | wasm-meshkit + tessellation.rs | ASCII + binary |
 | **OBJ** (.obj) | ✅ | ✅ | Native Rust parser | With materials |
-| **3MF** (.3mf) | ✅ | ✅ | Native Rust (XML + ZIP) | 3D printing |
-| **glTF** (.gltf/.glb) | ✅ | ✅ | OpenCascade + native | Visualization |
-| **SVG** (.svg) | ✅ | ✅ | Native Rust (usvg) | 2D sketches |
-| **DXF** (.dxf) | ✅ | ✅ | Native Rust (dxf crate) | 2D flat patterns |
-| **G-code** (.nc/.gcode) | — | ✅ | Native Rust generator | CNC + 3D print |
-| **PDF** (.pdf) | — | ✅ | Native Rust (printpdf) | 2D drawings |
-| **Parasolid** (.x_t) | 🔜 | — | Planned via OCCT | Future |
-| **ACIS/SAT** (.sat) | 🔜 | — | Planned via OCCT | Future |
+| **G-code** (.nc/.gcode) | — | ✅ | cam-engine | 8 post-processors |
+
+### 12.2 Planned Formats 🔮
+
+IGES, 3MF, glTF, SVG, DXF, PDF
 
 ---
 
-## 12. Plugin / Extension Architecture
+## 13. Plugin / Extension Architecture
 
-### 12.1 WASM Plugin Runtime
+The `plugin-runtime` crate (463 lines, 7 tests) provides WASM-sandboxed plugin execution via Wasmtime.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                  PLUGIN HOST (Editor Core)                │
-│                                                          │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │  wasmtime runtime (sandboxed WASM execution)       │  │
-│  │                                                     │  │
-│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐           │  │
-│  │  │Plugin: A │ │Plugin: B │ │Plugin: C │           │  │
-│  │  │DFM rules │ │Custom    │ │Machine   │           │  │
-│  │  │for aero  │ │material  │ │post-     │           │  │
-│  │  │parts     │ │library   │ │processor │           │  │
-│  │  └──────────┘ └──────────┘ └──────────┘           │  │
-│  │                                                     │  │
-│  │  WIT Interface (Component Model):                   │  │
-│  │  • read-geometry(entity) → BRepData                │  │
-│  │  • add-dfm-finding(entity, finding)                │  │
-│  │  • register-material(material)                     │  │
-│  │  • register-post-processor(name, fn)               │  │
-│  │  • subscribe-event(event_type, callback)           │  │
-│  │  • ui-add-panel(name, render_fn)                   │  │
-│  └────────────────────────────────────────────────────┘  │
-│                                                          │
-│  Plugins can be written in: Rust, C/C++, Go, Python,    │
-│  JavaScript, or any language targeting WASM + WIT.       │
-│                                                          │
-└─────────────────────────────────────────────────────────┘
-```
+| Module | Lines | Purpose |
+|--------|------:|---------|
+| `runtime.rs` | 162 | Wasmtime-based sandboxed WASM execution |
+| `manifest.rs` | 145 | Plugin metadata + capability declarations |
+| `registry.rs` | 141 | Plugin discovery + lifecycle management |
 
-### 12.2 Plugin Categories
-
-| Category | Example Plugins | Interface |
-|----------|----------------|-----------|
-| **DFM Rules** | Aerospace tolerances, medical device checks | `DfmPlugin` trait |
-| **Materials** | Custom alloys, composites, wood species | `MaterialPlugin` trait |
-| **Post-Processors** | Fanuc, Haas, Mazak, Siemens, custom machines | `PostProcessorPlugin` trait |
-| **File Formats** | Proprietary CAD format importers | `FileFormatPlugin` trait |
-| **Simulation** | Custom FEA solvers, thermal analysis | `SimulationPlugin` trait |
-| **UI Panels** | Custom property editors, dashboards | `UiPlugin` trait |
-| **Platform Adapters** | Shopify, WooCommerce, BigCommerce, Magento, Wix | `PlatformPlugin` trait |
+Plugin categories: DFM Rules, Materials, Post-Processors, File Formats. Runtime is ready; no production plugins shipped yet.
 
 ---
 
-## 13. Deployment Topology
+## 14. Deployment Topology
 
-### 13.1 Desktop Mode (Offline)
+### 14.1 Desktop Mode (Primary — Implemented)
 
 ```
 ┌──────────────────────────────────────────────┐
-│          TAURI DESKTOP APPLICATION             │
+│          TAURI 2 DESKTOP APPLICATION          │
 │  ┌──────────────────────────────────────────┐ │
-│  │  Rust Core (single binary, ~50MB)        │ │
-│  │  • CAD kernel (truck + OCCT static link) │ │
-│  │  • Renderer (wgpu + egui)                │ │
-│  │  • CAM engine + estimator                │ │
-│  │  • DFM analyzer                          │ │
-│  │  • SQLite for local persistence          │ │
-│  │  • WASM plugin runtime (wasmtime)        │ │
+│  │  Rust Core (single binary, ~14.8 MB)     │ │
+│  │  • cad-kernel (B-Rep + sketch + tools)   │ │
+│  │  • editor-shell (ECS + commands)         │ │
+│  │  • cam-engine (toolpaths + G-code)       │ │
+│  │  • constraint-solver (2D + 3D)           │ │
+│  │  • dfm-analyzer                          │ │
+│  │  • plugin-runtime (wasmtime)             │ │
 │  └──────────────────────────────────────────┘ │
 │  ┌──────────────────────────────────────────┐ │
 │  │  Web Frontend (Tauri webview)            │ │
-│  │  • React panels + property editors       │ │
-│  │  • Tree views + history                  │ │
+│  │  • React 18.3 + TypeScript 5.6           │ │
+│  │  • Three.js 0.170 (3D viewport)          │ │
+│  │  • Zustand 5.0 (state management)        │ │
+│  │  • Tailwind 3.4 (styling)                │ │
 │  └──────────────────────────────────────────┘ │
-│  GPU: Direct Vulkan/Metal/DX12               │
+│  GPU: System GPU via Three.js WebGL           │
 │  Storage: Local filesystem                    │
 │  No internet required                         │
 └──────────────────────────────────────────────┘
 ```
 
-### 13.2 Cloud Mode (SaaS — Current DFM Quote Suite Architecture)
+### 14.2 Cloud Mode (Infrastructure Exists)
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    CLOUD DEPLOYMENT                           │
-│                                                              │
-│  Browser Client (WASM)                                       │
-│  ├─ React 18 UI panels                                       │
-│  ├─ wasm-meshkit (client-side geometry)                      │
-│  ├─ truck WASM (parametric modeling)                         │
-│  └─ WebGPU viewport (wgpu WASM target)                      │
-│                                                              │
-│  ──── HTTPS / WSS / SSE ────                                │
-│                                                              │
-│  API Gateway (Axum 0.7)          ── Port 8080                │
-│  ├─ REST API (upload, jobs, quotes)                          │
-│  ├─ SSE (real-time analysis events)                          │
-│  ├─ JWT auth + multi-tenancy                                 │
-│  └─ Swagger (utoipa)                                         │
-│                                                              │
-│  Workers (Redis Stream consumers)                            │
-│  ├─ worker-cad (STEP→mesh, OCCT)                            │
-│  ├─ worker-analysis (DFM + estimation, GPU optional)         │
-│  └─ worker-cam (toolpath gen — NEW)                          │
-│                                                              │
-│  Infrastructure                                              │
-│  ├─ PostgreSQL 16 (persistent state)                         │
-│  ├─ Redis 7 (job queue + cache)                              │
-│  ├─ MinIO/S3 (file storage)                                  │
-│  ├─ Prometheus + Grafana (monitoring)                        │
-│  └─ Nginx (reverse proxy, rate limiting, TLS)               │
-│                                                              │
-│  Kubernetes (prod)                                           │
-│  ├─ api-gateway: 2 replicas, 512Mi                          │
-│  ├─ worker-cad: 2 replicas, 2Gi + OCCT sidecar             │
-│  ├─ worker-analysis: 1 replica, 4Gi + 1× NVIDIA GPU        │
-│  └─ Ingress: cert-manager + Let's Encrypt                   │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 13.3 Hybrid Mode (Desktop + Cloud)
-
-```
-Desktop app handles:
-  • Parametric modeling (local, instant)
-  • Viewport rendering (local GPU)
-  • Basic DFM analysis (local)
-  • File management (local + cloud sync)
-
-Cloud handles:
-  • STEP import (OpenCascade heavy lifting)
-  • Full CNC toolpath generation
-  • FEA simulation (GPU farm)
-  • Collaboration (CRDT sync server)
-  • Quoting (live pricing database)
-  • Platform integrations (Shopify, WooCommerce, etc.)
-```
-
----
-
-## 14. Complete Technology Matrix
-
-### 14.1 Core Engine (Rust)
-
-| Layer | Crate | Version | Purpose | Multicore | GPU |
-|-------|-------|---------|---------|-----------|-----|
-| **Math** | `glam` | 0.29 | SIMD vec/mat/quat | SSE4.2/NEON intrinsics | — |
-| **Math** | `nalgebra` | 0.33 | Dense linear algebra for FEA | Rayon parallel | — |
-| **Math** | `nalgebra-sparse` | 0.10 | Sparse matrices for FEA | — | — |
-| **Geometry** | `truck-base` | 0.6 | Tolerance, curve/surface traits | — | — |
-| **Geometry** | `truck-geometry` | 0.6 | B-Spline, NURBS curves & surfaces | — | — |
-| **Topology** | `truck-topology` | 0.6 | Vertex, Edge, Wire, Face, Shell, Solid | — | — |
-| **Modeling** | `truck-modeling` | 0.6 | Extrude, revolve, sweep, loft, blend | Rayon | — |
-| **Booleans** | `truck-shapeops` | 0.6 | CSG union, cut, intersect | Rayon | GPU planned |
-| **Meshing** | `truck-meshalgo` | 0.6 | Tessellation from B-Rep | Rayon par_iter | GPU planned |
-| **Mesh** | `truck-polymesh` | 0.6 | Polygon mesh data + algorithms | Rayon | — |
-| **STEP I/O** | `truck-stepio` | 0.6 | STEP file read/write | — | — |
-| **GPU lib** | `wgpu` | 28.0 | Cross-platform GPU API | — | ✅ Vulkan/Metal/DX12/WebGPU |
-| **GPU render** | `truck-platform` | 0.6 | wgpu render pipeline abstraction | — | ✅ |
-| **GPU visual** | `truck-rendimpl` | 0.6 | Shape + mesh rendering | — | ✅ |
-| **Shading** | `naga` | 28.0 | WGSL → SPIR-V/MSL/HLSL compiler | — | — |
-| **OCCT** | `opencascade-rs` | 0.2 | OCCT bindings for STEP/IGES/Booleans | — | — |
-| **CAD kernel** | `fj-core` | 0.49 | Pure Rust B-Rep (experimental) | — | — |
-| **Parallelism** | `rayon` | 1.10 | Data-parallel iterators | ✅ work-stealing | — |
-| **Async** | `tokio` | 1.0 | Async runtime (file I/O, network) | ✅ multi-thread | — |
-| **Web** | `axum` | 0.7 | HTTP framework (API gateway) | ✅ via tokio | — |
-| **DB** | `sqlx` | 0.7 | Async PostgreSQL driver | ✅ connection pool | — |
-| **Cache** | `redis` | 0.25 | Redis client (streams, pub/sub) | ✅ via tokio | — |
-| **S3** | `aws-sdk-s3` | 1.0 | S3-compatible object storage | ✅ via tokio | — |
-| **Serialization** | `serde` | 1.0 | Serialize/deserialize (JSON, bincode) | — | — |
-| **Tracing** | `tracing` | 0.1 | Structured logging + spans | — | — |
-| **Metrics** | `metrics` | 0.24 | Prometheus metrics export | — | — |
-| **UUID** | `uuid` | 1.0 | Entity + job identifiers | — | — |
-| **Time** | `chrono` | 0.4 | Timestamps | — | — |
-| **Error** | `anyhow` + `thiserror` | 1.0 | Error handling | — | — |
-| **API docs** | `utoipa` | 4.0 | OpenAPI/Swagger generation | — | — |
-| **Hashing** | `sha2` | 0.10 | File content hashing | — | — |
-| **WASM** | `wasm-bindgen` | 0.2 | Rust↔JS FFI | — | — |
-| **WASM** | `js-sys` + `web-sys` | 0.3 | Browser API access | — | — |
-| **Plugins** | `wasmtime` | 28.0 | WASM plugin runtime (sandboxed) | ✅ | — |
-| **Bench** | `criterion` | 0.5 | Performance benchmarks | — | — |
-| **Constraint** | Custom (Newton-Raphson) | — | 2D sketch constraint solver | Rayon | GPU fallback |
-
-### 14.2 Frontend (TypeScript/React)
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `react` | 18.3 | UI framework |
-| `react-dom` | 18.3 | DOM rendering |
-| `typescript` | 5.6 | Type safety |
-| `vite` | 6.0 | Build tool (dev server + bundler) |
-| `tailwindcss` | 3.4 | Utility-first CSS |
-| `framer-motion` | 11.11 | Animation |
-| `lucide-react` | 0.460 | Icon library |
-| `three` | 0.170 | 3D preview thumbnails |
-| `@react-three/fiber` | 8.17 | React Three.js wrapper |
-| `@react-three/drei` | 9.114 | Three.js helpers |
-| `clsx` | 2.1 | Conditional classnames |
-| `postcss` | 8.4 | CSS processing |
-| `autoprefixer` | 10.4 | CSS vendor prefixes |
-
-### 14.3 Desktop Shell
-
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| `tauri` | 2.2 | Native window shell (WebView2/WKWebView) |
-| `tauri-plugin-store` | 2.0 | Persistent settings |
-| `tauri-plugin-dialog` | 2.0 | Native file open/save dialogs |
-| `tauri-plugin-fs` | 2.0 | File system access |
-| `tauri-plugin-shell` | 2.0 | Spawn subprocesses (OCCT bridge) |
-
-### 14.4 Infrastructure
-
-| Technology | Version/Image | Purpose |
-|------------|---------------|---------|
-| PostgreSQL | `postgres:16-alpine` | Persistent project/job/quote storage |
-| Redis | `redis:7-alpine` | Job queue (streams) + cache |
-| MinIO | `minio/minio:latest` | S3-compatible file storage |
-| Nginx | `nginx:alpine` | Reverse proxy, TLS, rate limiting |
-| Prometheus | `prom/prometheus:latest` | Metrics collection |
-| Grafana | `grafana/grafana:latest` | Dashboards |
-| Docker | Multi-stage builds | Containerization |
-| Kubernetes | 1.28+ | Orchestration (GPU node pools) |
-| cert-manager | Latest | TLS certificate automation |
+API Gateway (Axum 0.7), 3 Redis Stream worker crates, PostgreSQL 16, Redis 7, MinIO/S3, Docker + Kubernetes, Prometheus + Grafana.
 
 ---
 
 ## 15. Crate / Package Dependency Map
 
 ```
-                            ┌──────────────┐
-                            │  APPLICATION │
-                            │  (main.rs)   │
-                            └──────┬───────┘
-                                   │
-              ┌────────────────────┼────────────────────┐
-              ▼                    ▼                    ▼
-    ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
-    │  editor-shell    │ │  api-gateway     │ │  tauri-app       │
-    │  (ECS + UI)      │ │  (REST + SSE)    │ │  (Desktop shell) │
-    └────────┬─────────┘ └────────┬─────────┘ └────────┬─────────┘
-             │                    │                    │
-    ┌────────┼────────┐           │                    │
-    ▼        ▼        ▼           ▼                    │
-  ┌─────┐ ┌─────┐ ┌────────┐  ┌────────────┐          │
-  │egui │ │wgpu │ │renderer│  │shared-types│◄─────────┘
-  │     │ │     │ │(truck- │  │(api, dfm,  │
-  │     │ │     │ │rendimpl│  │ estimation,│
-  │     │ │     │ │+ plat- │  │ materials, │
-  │     │ │     │ │ form)  │  │ platform)  │
-  └─────┘ └─────┘ └────────┘  └─────┬──────┘
-                                     │
-              ┌──────────────────────┼──────────────────────┐
-              ▼                      ▼                      ▼
-    ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-    │  cad-kernel      │  │  cam-engine      │  │  dfm-analyzer    │
-    │  ─────────────   │  │  ──────────      │  │  ────────────    │
-    │  truck-modeling  │  │  toolpath gen    │  │  wall thickness  │
-    │  truck-shapeops  │  │  nesting         │  │  draft angles    │
-    │  constraint-     │  │  G-code post     │  │  undercuts       │
-    │  solver          │  │  feeds/speeds    │  │  cost estimation │
-    │  history tree    │  │  sheet-estimator │  │  sheet-estimator │
-    │  opencascade-rs  │  │  laser/plasma/wj │  │  laser/plasma/wj │
-    └──────────────────┘  └──────────────────┘  └──────────────────┘
-              │                      │                      │
-              ▼                      ▼                      ▼
-    ┌─────────────────────────────────────────────────────────┐
-    │                    truck-* crate family                  │
-    │  base │ geotrait │ geometry │ topology │ polymesh        │
-    │  meshalgo │ stepio │ platform │ rendimpl │ shapeops      │
-    └──────────────────────┬──────────────────────────────────┘
-                           │
-              ┌────────────┼────────────────┐
-              ▼            ▼                ▼
-         ┌────────┐  ┌─────────┐     ┌──────────┐
-         │  glam  │  │  wgpu   │     │  rayon   │
-         │ (SIMD) │  │ (GPU)   │     │ (par)    │
-         └────────┘  └─────────┘     └──────────┘
+                            ┌──────────────────┐
+                            │  apps/desktop    │
+                            │  (Tauri 2 shell) │
+                            └──────┬───────────┘
+                                   │ depends on
+                    ┌──────────────┼────────────────┐
+                    ▼              ▼                 ▼
+          ┌─────────────┐ ┌──────────────┐ ┌──────────────┐
+          │editor-shell │ │  cad-kernel  │ │  cam-engine  │
+          │(ECS + cmds) │ │(10,269 lines)│ │(1,555 lines) │
+          └──────┬──────┘ └──────┬───────┘ └──────┬───────┘
+                 │               │                │
+        ┌────────┼───────┐      │                │
+        ▼        ▼       ▼      ▼                ▼
+   ┌────────┐┌───────┐┌──────────────┐    ┌──────────────┐
+   │renderer││plugin-││constraint-   │    │dfm-analyzer  │
+   │        ││runtime││solver        │    │(561 lines)   │
+   │(553 ln)││(463ln)││(1,915 lines) │    └──────┬───────┘
+   └────────┘└───────┘└──────┬───────┘           │
+                             │                    │
+                    ┌────────┴────────────────────┘
+                    ▼
+          ┌──────────────────┐
+          │  shared-types    │
+          │  (1,130 lines)   │
+          │  geometry, mats, │
+          │  estimation, dfm │
+          └──────┬───────────┘
+                 │
+        ┌────────┼────────────┐
+        ▼        ▼            ▼
+   ┌────────┐ ┌─────────┐ ┌──────────┐
+   │ truck-*│ │  glam   │ │  rayon   │
+   │ crates │ │  (SIMD) │ │  (par)   │
+   └────────┘ └─────────┘ └──────────┘
+
+Also in workspace (independent):
+  api-gateway, wasm-meshkit, bench,
+  worker-analysis, worker-cad, worker-cam
 ```
 
 ---
 
-## 16. Performance Targets
+## 16. Technology Matrix
 
-### 16.1 Geometry Operations
+### 16.1 Core Engine (Rust)
+
+| Layer | Crate | Purpose |
+|-------|-------|---------|
+| Math | `glam` | SIMD vec/mat/quat |
+| Math | `nalgebra` | Dense linear algebra for solvers |
+| Geometry | `truck-geotrait` .. `truck-stepio` (7 crates) | B-Rep/NURBS kernel |
+| GPU | `wgpu` | Cross-platform GPU |
+| Windowing | `winit` | Cross-platform windows |
+| UI | `egui` + `egui-wgpu` + `egui-winit` | Immediate-mode GUI |
+| Parallelism | `rayon` | Data-parallel iterators |
+| Async | `tokio` | Async I/O |
+| Serialization | `serde` + `serde_json` | JSON serialization |
+| Plugins | `wasmtime` | WASM runtime |
+
+### 16.2 Frontend (TypeScript/React)
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `react` | 18.3 | UI framework |
+| `typescript` | 5.6 | Type safety |
+| `vite` | 6.4.1 | Build tool |
+| `three` | 0.170 | 3D viewport |
+| `@react-three/fiber` | 8.17 | React Three.js wrapper |
+| `zustand` | 5.0 | State management |
+| `tailwindcss` | 3.4 | Utility CSS |
+
+### 16.3 Desktop Shell
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| `tauri` | 2.2 | Native window |
+| `tauri-plugin-store` | 2.0 | Persistent settings |
+| `tauri-plugin-dialog` | 2.0 | Native file dialogs |
+| `tauri-plugin-fs` | 2.0 | File system access |
+
+---
+
+## 17. Test Coverage
+
+### 17.1 Rust Tests (295 Passing)
+
+| Crate | Tests | Key Coverage |
+|-------|------:|-------------|
+| `cad-kernel` | 125 | operations (60), sketch_ops (13), tessellation (11), tools (6), snap (6), document (5), naming (5), brep (4), sketch (4), snapshot (4), history (4), features (3) |
+| `cam-engine` | 64 | toolpaths (26), G-code (17), nesting (18), sheet (2), CNC (1) |
+| `constraint-solver` | 30 | solver3d (22), types (6), solver2d (2) |
+| `dfm-analyzer` | 27 | analysis (10), checks (17) |
+| `editor-shell` | 22 | app (13), commands (9) |
+| `wasm-meshkit` | 20 | mesh ops (13), STL (1), LOD (6) |
+| `plugin-runtime` | 7 | runtime (7) |
+| `shared-types` | 0 | ⚠️ No tests |
+| `renderer` | 0 | ⚠️ No tests |
+
+### 17.2 Frontend Tests (319 Passing)
+
+64 store tests + 317 component/integration tests. See Section 10.4 for full breakdown.
+
+### 17.3 Running Tests
+
+```bash
+# All Rust tests
+cargo test --workspace
+
+# Frontend tests
+cd apps/desktop && npx vitest run
+```
+
+---
+
+## 18. Performance Targets
+
+### 18.1 Implemented
 
 | Operation | Target | Method |
 |-----------|--------|--------|
-| NURBS evaluation (1M points) | < 2ms | GPU compute shader |
-| Tessellation (100K-triangle part) | < 10ms | GPU + CPU Rayon hybrid |
-| Boolean union (two 50K-tri solids) | < 100ms | GPU-accelerated classification |
-| Fillet (100 edges, r=2mm) | < 200ms | CPU Rayon parallel per-edge |
-| Constraint solve (200 equations) | < 5ms | Newton-Raphson + sparse LU |
-| BVH build (1M triangles) | < 3ms | GPU LBVH (Morton codes) |
-| Ray pick (screen click) | < 0.5ms | GPU BVH traversal |
-| STL import (50MB, 1M triangles) | < 500ms | WASM + SIMD |
-| STEP import (complex assembly) | < 10s | OpenCascade (server worker) |
+| Constraint solve (200 equations) | < 5ms | DogLeg → LM → BFGS → NR cascade |
+| Feature execution (single) | < 200ms | Incremental rebuild, cached intermediates |
+| Sketch snap computation | < 1ms | Priority-sorted candidate collection |
+| Tauri IPC round-trip | < 5ms | Serde JSON serialization |
 
-### 16.2 Rendering
-
-| Metric | Target | Method |
-|--------|--------|--------|
-| Frame rate (< 1M triangles) | 60 FPS | Deferred PBR, GPU culling |
-| Frame rate (1M–10M triangles) | 30 FPS | LOD + occlusion culling |
-| Frame rate (> 10M triangles) | 15 FPS | Aggressive LOD + streaming |
-| First paint after load | < 200ms | Progressive mesh loading |
-| Viewport resize response | < 16ms | Resize swap chain only |
-| Shadow map resolution | 4 × 2048² | Cascaded shadow maps |
-
-### 16.3 Manufacturing
+### 18.2 Future 🔮
 
 | Operation | Target | Method |
 |-----------|--------|--------|
-| DFM analysis (full part) | < 2s | Rayon par_iter over checks |
-| CNC cost estimate | < 100ms | Physics models (Kienzle etc.) |
-| Sheet metal cost estimate | < 50ms | Physics models (laser/plasma/wj) |
-| 2D rectangular nesting (50 parts) | < 500ms | GPU parallel candidate eval |
-| True-shape nesting (50 parts) | < 5s | GPU NFP + simulated annealing |
-| G-code generation (roughing) | < 10s | Parallel toolpath offset |
-| Bend sequence optimization | < 1s | Branch-and-bound |
-
-### 16.4 Memory Budget
-
-| Component | Budget | Notes |
-|-----------|--------|-------|
-| GPU VRAM (viewport) | 256–512 MB | Meshes + textures + framebuffers |
-| GPU VRAM (compute) | 256 MB | Staging + result buffers |
-| CPU RAM (kernel) | 1–2 GB | B-Rep + history tree + undo stack |
-| CPU RAM (browser WASM) | 512 MB | Emscripten memory limit |
-| CPU RAM (desktop) | 4–8 GB | Full feature set + large assemblies |
+| GPU tessellation (1M pts) | < 2ms | WGSL compute shaders |
+| Boolean (50K-tri solids) | < 100ms | GPU classification |
+| 60 FPS rendering | 16.7ms | Deferred PBR + GPU culling |
 
 ---
 
-## 17. Migration Path from Current Stack
+## 19. Implementation Status & Roadmap
 
-### Phase 1 — Foundation (Weeks 1–4)
+### 19.1 Completed ✅
 
-```
-✅ Already done:
-  • Rust workspace structure
-  • wgpu integration
-  • Physics-based estimators (CNC + sheet metal)
-  • 17+6 material catalog
-  • Docker + K8s deployment
-  • React GUI with Three.js viewport
-  • WASM mesh processing
-  • PostgreSQL + Redis + MinIO infra
+- B-Rep/NURBS kernel (Truck) with 20 parametric features (60 tests)
+- Topological Naming Service (5-cascade resolution)
+- 7 sketch entity types + 19 constraints
+- Sketch operations: trim, bevel, offset, path walker, intersections, bezier, mesh (13 tests)
+- Stateful tool framework: LineTool, CircleTool, ArcTool, RectangleTool (6 tests)
+- Snap engine: 7 snap types + GPU picking color map + spiral search (6 tests)
+- Sketch snapshots + tool undo manager + clipboard with dependency resolution (4 tests)
+- Transaction-based undo/redo, document model, event bus, dependency graph
+- Mesh quality analysis + Laplacian/Taubin smoothing + STL export (11 tests)
+- 2D constraint solver (4-stage cascade) + 3D assembly solver (30 tests)
+- CNC toolpaths + 8 G-code post-processors + 2D nesting + sheet metal (64 tests)
+- DFM analysis with severity scoring (27 tests)
+- WASM plugin runtime (Wasmtime) + WASM mesh toolkit (27 tests)
+- ECS world + 22 commands + 21 tools (22 tests)
+- Tauri 2 desktop app with 37 IPC commands
+- Zustand store (Fusion 360-style) with 319 frontend tests
+- 17 sheet + 6 CNC materials catalog
+- API gateway, Docker/K8s deployment, Prometheus/Grafana
 
-🔧 Add:
-  • truck-* crates to Cargo workspace
-  • Tauri desktop shell (alongside existing web GUI)
-  • egui viewport overlay (replace Three.js for CAD viewport)
-  • glam math library (replace ad-hoc f64 vectors)
-```
+### 19.2 Future Roadmap 🔮
 
-### Phase 2 — CAD Kernel Integration (Weeks 5–12)
-
-```
-🔧 Add:
-  • Parametric feature tree (history-based modeling)
-  • 2D sketch entity + constraint solver
-  • Extrude, revolve, fillet, chamfer operations via truck-modeling
-  • Boolean operations via truck-shapeops
-  • STEP import/export via truck-stepio + opencascade-rs
-  • Undo/redo command pattern
-```
-
-### Phase 3 — GPU Acceleration (Weeks 13–20)
-
-```
-🔧 Add:
-  • WGSL compute shaders for tessellation
-  • GPU BVH construction + ray picking
-  • GPU-accelerated nesting
-  • PBR deferred renderer (replace Three.js)
-  • Edge detection + silhouette rendering
-  • Multi-viewport support
-```
-
-### Phase 4 — CAM Engine (Weeks 21–28)
-
-```
-🔧 Add:
-  • CNC toolpath generation (roughing + finishing)
-  • G-code post-processors (Fanuc, Haas, Mazak)
-  • Sheet metal flat pattern generation
-  • Bend sequence optimizer
-  • 2D nesting (rectangular + true-shape)
-  • Toolpath simulation / verification
-```
-
-### Phase 5 — Polish & Platform (Weeks 29–36)
-
-```
-🔧 Add:
-  • WASM plugin system (wasmtime)
-  • Real-time collaboration (CRDT)
-  • FEA stress analysis (basic)
-  • Desktop installer (Tauri bundle)
-  • Documentation + tutorials
-  • CI/CD pipeline (GitHub Actions)
-  • Performance optimization pass
-```
+| Phase | Features |
+|-------|----------|
+| **Native viewport** | Replace Three.js with wgpu PBR renderer |
+| **GPU compute** | WGSL shaders for tessellation, BVH, booleans |
+| **FEA simulation** | Stress, thermal, modal analysis |
+| **Collaboration** | CRDT-based multi-user editing |
+| **3D printing** | Slicing, support generation |
+| **Formats** | IGES, 3MF, glTF, SVG, DXF |
+| **Advanced CAM** | Adaptive clearing, material removal simulation |
 
 ---
 
-## Appendix A — Full Current Stack Inventory
+## Appendix A — Workspace Crate Inventory
 
-### A.1 Rust Workspace Dependencies
-
-| Crate | Version | Features |
-|-------|---------|----------|
-| tokio | 1 | `full` |
-| axum | 0.7 | `multipart` |
-| axum-extra | 0.9 | — |
-| tower | 0.4 | — |
-| tower-http | 0.5 | `cors`, `trace`, `fs` |
-| serde | 1 | `derive` |
-| serde_json | 1 | — |
-| sqlx | 0.7 | `runtime-tokio-rustls`, `postgres`, `uuid`, `chrono`, `migrate` |
-| redis | 0.25 | `tokio-comp`, `streams` |
-| aws-sdk-s3 | 1 | — |
-| aws-config | 1 | — |
-| wgpu | 0.19 | — |
-| wgpu-core | 0.1 | — |
-| tracing | 0.1 | — |
-| tracing-subscriber | 0.3 | `fmt`, `env-filter` |
-| utoipa | 4 | `axum_extras`, `chrono` |
-| utoipa-swagger-ui | 6 | `axum` |
-| uuid | 1 | `v4`, `serde` |
-| chrono | 0.4 | `serde` |
-| sha2 | 0.10 | — |
-| hex | 0.4 | — |
-| anyhow | 1 | — |
-| thiserror | 1 | — |
-
-### A.2 Frontend npm Dependencies
-
-| Package | Version | Type |
-|---------|---------|------|
-| react | ^18.3.1 | dep |
-| react-dom | ^18.3.1 | dep |
-| three | ^0.170.0 | dep |
-| @react-three/fiber | ^8.17.0 | dep |
-| @react-three/drei | ^9.114.0 | dep |
-| framer-motion | ^11.11.0 | dep |
-| lucide-react | ^0.460.0 | dep |
-| clsx | ^2.1.1 | dep |
-| typescript | ^5.6.3 | devDep |
-| vite | ^6.0.0 | devDep |
-| @vitejs/plugin-react | ^4.3.4 | devDep |
-| tailwindcss | ^3.4.15 | devDep |
-| postcss | ^8.4.49 | devDep |
-| autoprefixer | ^10.4.20 | devDep |
-| @types/react | ^18.3.12 | devDep |
-| @types/react-dom | ^18.3.1 | devDep |
-| @types/three | ^0.170.0 | devDep |
-
-### A.3 Docker Services
-
-| Service | Image | Ports |
-|---------|-------|-------|
-| postgres | `postgres:16-alpine` | 5432 |
-| redis | `redis:7-alpine` | 6379 |
-| minio | `minio/minio:latest` | 9000, 9002 |
-| api-gateway | `rust:latest` → `debian:trixie-slim` | 8080 |
-| worker-cad | `rust:latest` → `debian:trixie-slim` | — |
-| worker-analysis | `rust:latest` → `debian:trixie-slim` (+ vulkan) | — |
-| gui | `node:20-alpine` → `nginx:alpine` | 3001 |
-| prometheus | `prom/prometheus:latest` | 9090 |
-| grafana | `grafana/grafana:latest` | 3030 |
-
-### A.4 Database Schema
-
-4 tables: `uploads`, `jobs`, `dfm_findings`, `quotes`
-4 indexes: `idx_jobs_upload_id`, `idx_jobs_tenant_id`, `idx_findings_job_id`, `idx_quotes_job_id`
-
-### A.5 Platform Adapters
-
-| Platform | Technology | Status |
-|----------|-----------|--------|
-| Shopify | Remix + Theme App Extension | Scaffolded |
-| BigCommerce | Next.js 14 + Storefront Script | Scaffolded |
-| WooCommerce | PHP Plugin | Scaffolded |
-| Magento 2 | PHP Module | Scaffolded |
-| Wix | Custom Element + Velo Backend | Scaffolded |
+| Crate | Files | Lines | Tests |
+|-------|------:|------:|------:|
+| `cad-kernel` | 13 | 10,269 | 125 |
+| `constraint-solver` | 4 | 1,915 | 30 |
+| `cam-engine` | 6 | 1,555 | 64 |
+| `editor-shell` | 6 | 1,301 | 22 |
+| `shared-types` | 9 | 1,130 | 0 |
+| `renderer` | 6 | 553 | 0 |
+| `dfm-analyzer` | 3 | 561 | 27 |
+| `wasm-meshkit` | 4 | 531 | 20 |
+| `plugin-runtime` | 4 | 463 | 7 |
+| `apps/desktop` (Tauri) | 2 | ~792 | 0 |
+| **Rust Total** | **57+** | **~19,070** | **295** |
+| **Frontend (TS)** | **3+** | **~1,390+** | **319** |
+| **Grand Total** | **60+** | **~20,460+** | **614** |
 
 ---
 
-## Appendix B — Recommended Crate Versions
+## Appendix B — Cargo Workspace Dependencies
 
 ```toml
-# ─── Cargo.toml (workspace root) ───
-
 [workspace]
 resolver = "2"
 members = [
     "packages/api-gateway",
     "packages/worker-analysis",
     "packages/worker-cad",
-    "packages/worker-cam",           # NEW: Toolpath generation worker
+    "packages/worker-cam",
     "packages/shared-types",
     "packages/wasm-meshkit",
-    "packages/cad-kernel",           # NEW: Truck-based parametric kernel
-    "packages/cam-engine",           # NEW: Toolpath + nesting + G-code
-    "packages/constraint-solver",    # NEW: 2D/3D constraint solver
-    "packages/renderer",             # NEW: wgpu PBR renderer
-    "packages/editor-shell",         # NEW: ECS orchestrator
-    "packages/plugin-runtime",       # NEW: wasmtime plugin host
-    "apps/desktop",                  # NEW: Tauri desktop app
-    "bench",
+    "packages/cad-kernel",
+    "packages/cam-engine",
+    "packages/constraint-solver",
+    "packages/dfm-analyzer",
+    "packages/renderer",
+    "packages/editor-shell",
+    "packages/plugin-runtime",
+    "apps/desktop/src-tauri",
+    "packages/bench",
 ]
 
 [workspace.package]
 version = "0.2.0"
 edition = "2021"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/manushop/cad-cam-editor"
-
-[workspace.dependencies]
-# ─── Async Runtime ───
-tokio = { version = "1", features = ["full"] }
-rayon = "1.10"
-
-# ─── Web Framework ───
-axum = { version = "0.7", features = ["multipart"] }
-axum-extra = "0.9"
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace", "fs"] }
-
-# ─── Serialization ───
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-bincode = "1"
-
-# ─── Database ───
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
-redis = { version = "0.25", features = ["tokio-comp", "streams"] }
-
-# ─── Storage ───
-aws-sdk-s3 = "1"
-aws-config = "1"
-
-# ─── GPU ───
-wgpu = "28.0"
-naga = "28.0"
-
-# ─── Math ───
-glam = { version = "0.29", features = ["serde"] }
-nalgebra = { version = "0.33", features = ["rayon"] }
-nalgebra-sparse = "0.10"
-
-# ─── Geometry (Truck CAD Kernel) ───
-truck-base = "0.6"
-truck-geotrait = "0.6"
-truck-geometry = "0.6"
-truck-topology = "0.6"
-truck-modeling = "0.6"
-truck-shapeops = "0.6"
-truck-meshalgo = "0.6"
-truck-polymesh = "0.6"
-truck-platform = "0.6"
-truck-rendimpl = "0.6"
-truck-stepio = "0.6"
-
-# ─── CAD (OpenCascade backup) ───
-opencascade = "0.2"
-
-# ─── UI ───
-egui = "0.31"
-egui-wgpu = "0.31"
-egui-winit = "0.31"
-winit = "0.30"
-
-# ─── Desktop Shell ───
-tauri = "2.2"
-tauri-plugin-store = "2.0"
-tauri-plugin-dialog = "2.0"
-tauri-plugin-fs = "2.0"
-tauri-plugin-shell = "2.0"
-
-# ─── Plugin Runtime ───
-wasmtime = "28.0"
-
-# ─── Observability ───
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
-metrics = "0.24"
-metrics-exporter-prometheus = "0.16"
-
-# ─── API Documentation ───
-utoipa = { version = "4", features = ["axum_extras", "chrono"] }
-utoipa-swagger-ui = { version = "6", features = ["axum"] }
-
-# ─── Utilities ───
-uuid = { version = "1", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
-sha2 = "0.10"
-hex = "0.4"
-anyhow = "1"
-thiserror = "1"
-image = "0.25"
-
-# ─── File Formats ───
-dxf = "0.6"
-printpdf = "0.7"
-
-# ─── WASM ───
-wasm-bindgen = "0.2"
-js-sys = "0.3"
-web-sys = { version = "0.3", features = ["console", "Performance", "Window"] }
-
-# ─── Benchmarks ───
-criterion = { version = "0.5", features = ["html_reports"] }
-
-[profile.release]
-opt-level = 3
-lto = "fat"
-codegen-units = 1
-strip = true
-
-[profile.dev]
-opt-level = 1     # Faster dev builds with some optimization
-
-[profile.dev.package."*"]
-opt-level = 2     # Optimize dependencies even in dev mode
+license = "AGPL-3.0"
 ```
 
----
+### Key Dependency Categories
 
-## Summary
-
-This architecture transforms the existing DFM Quote Suite (a browser-based upload → analyze → quote pipeline) into a **full-featured open-source 3D CAD/CAM editor** with:
-
-- **Pure-Rust CAD kernel** (Truck) with NURBS/B-Rep, OpenCascade as fallback
-- **GPU-accelerated** geometry processing via wgpu 28 compute shaders (Vulkan/Metal/DX12/WebGPU)
-- **Multicore** data parallelism via Rayon + async I/O via Tokio + ECS parallel schedules
-- **Intuitive UI** — egui for viewport, React + Tailwind for panels, Tauri for desktop
-- **Integrated manufacturing** — CNC toolpaths, sheet metal cutting/bending, nesting, G-code
-- **Physics-based pricing** — preserving all 10+ estimation models already built
-- **Plugin ecosystem** — WASM sandboxed plugins via wasmtime
-- **Cross-platform** — Desktop (Windows/Mac/Linux), Web (WASM + WebGPU), Cloud (K8s)
-- **17 sheet materials + 6 CNC materials** with real-world physical properties
-
-The migration path is incremental: each phase adds capability while preserving the existing working system.
+| Category | Crates |
+|----------|--------|
+| **Geometry** | truck-geotrait, -topology, -modeling, -shapeops, -meshalgo, -polymesh, -stepio (0.6) |
+| **Math** | glam (SIMD), nalgebra |
+| **GPU** | wgpu, egui, egui-wgpu, egui-winit, winit |
+| **Runtime** | tokio (async), rayon (parallel) |
+| **Desktop** | tauri 2.2, tauri-plugin-store/dialog/fs |
+| **Plugins** | wasmtime |
+| **Web** | axum, sqlx, redis |
+| **WASM** | wasm-bindgen, js-sys, web-sys |
 
 ---
 
-*Document generated: March 4, 2026*
-*Project: ManuShop CAD/CAM Editor*
-*License: MIT OR Apache-2.0*
+*Document last updated: June 2025 · r3ditor v0.2.0 · License: AGPL-3.0*

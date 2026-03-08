@@ -42,9 +42,29 @@ export function FeatureDialog() {
           className="flex items-center gap-1 px-4 py-1.5 text-xs font-medium rounded bg-fusion-green hover:bg-fusion-green-hover text-white transition-colors"
           onClick={() => {
             const store = useEditorStore.getState();
-            // Add to first component's children if possible
             const id = `${featureType}_${Date.now()}`;
-            // Add to timeline
+
+            // ── Extrude: actually create a 3D body from selected sketch ──
+            if (featureType === 'extrude') {
+              const selectedId = store.selectedIds[0];
+              const sketch = store.finishedSketches.find((s) => s.id === selectedId);
+              if (sketch) {
+                store.extrudeSketch(sketch.id, {
+                  distance: (params.distance as number) ?? 10,
+                  direction: (params.direction as 'one_side' | 'symmetric' | 'two_sides') ?? 'one_side',
+                  operation: (params.operation as 'new_body' | 'join' | 'cut' | 'intersect') ?? 'new_body',
+                  taper: (params.taper as number) ?? 0,
+                });
+                closeFeatureDialog();
+                return;
+              } else {
+                store.setStatusMessage('Select a sketch first, then click Extrude');
+                closeFeatureDialog();
+                return;
+              }
+            }
+
+            // Add to timeline for non-extrude features
             store.setTimeline([...store.timeline, {
               id,
               name: featureLabel,

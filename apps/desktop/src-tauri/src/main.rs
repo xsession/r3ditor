@@ -63,6 +63,40 @@ fn main() {
             commands::get_materials,
             commands::estimate_cost,
             commands::export_all_stl,
+            // Sketch CRUD
+            commands::create_sketch,
+            commands::delete_sketch,
+            commands::get_sketches,
+            commands::set_active_sketch,
+            commands::get_active_sketch,
+            // Sketch Entities
+            commands::get_sketch_entities,
+            commands::add_sketch_line,
+            commands::add_sketch_circle,
+            commands::add_sketch_arc,
+            commands::add_sketch_point,
+            commands::remove_sketch_entity,
+            // Sketch Operations
+            commands::trim_segment,
+            commands::bevel_at_point,
+            commands::offset_path,
+            // Snap System
+            commands::compute_snap,
+            commands::update_snap_config,
+            // Clipboard
+            commands::copy_sketch_entities,
+            commands::paste_sketch_entities,
+            // Snapshot / Undo
+            commands::take_sketch_snapshot,
+            commands::restore_sketch_snapshot,
+            // Tool System
+            commands::set_active_tool,
+            commands::get_tool_status,
+            // Constraints
+            commands::get_sketch_constraints,
+            commands::remove_sketch_constraint,
+            // Path Analysis
+            commands::get_sketch_paths,
         ]);
 
     tracing::info!("Running Tauri event loop...");

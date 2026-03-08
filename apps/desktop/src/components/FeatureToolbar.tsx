@@ -62,10 +62,6 @@ const constructTools: ToolItem[] = [
   { id: 'circularPattern', icon: RotateCw, label: 'Circular Pattern' },
 ];
 
-const inspectTools: ToolItem[] = [
-  { id: 'select', icon: Ruler, label: 'Measure' },
-];
-
 // ── Sketch mode tools ──
 const sketchDrawTools: { id: SketchTool; icon: React.ElementType; label: string; shortcut?: string }[] = [
   { id: 'line', icon: Minus, label: 'Line', shortcut: 'L' },
@@ -203,66 +199,81 @@ export function FeatureToolbar() {
     );
   }
 
-  // ── DESIGN workspace toolbar (Fusion 360 style) ──
+  // ── DESIGN workspace toolbar (Fusion 360 ribbon style) ──
   if (workspaceMode === 'design') {
     return (
       <div className="flex flex-col bg-fusion-toolbar border-b border-fusion-border select-none">
         {/* Row 1: Workspace tabs (SOLID / SURFACE / SHEET METAL / MESH / PLASTIC) */}
-        <div className="flex items-center border-b border-fusion-border">
+        <div className="flex items-center h-[30px] border-b border-[#2a2a2a]">
           {workspaceTabs.map((ws) => (
             <button
               key={ws}
               className={clsx(
-                'px-4 py-1.5 text-[11px] font-bold tracking-wider transition-colors relative',
+                'px-4 h-full text-[10px] font-bold tracking-[0.08em] transition-colors relative',
                 fusionWorkspace === ws
-                  ? 'text-fusion-text-bright'
-                  : 'text-fusion-text-secondary hover:text-fusion-text',
+                  ? 'text-fusion-text-bright bg-fusion-toolbar'
+                  : 'text-fusion-text-disabled hover:text-fusion-text-secondary hover:bg-fusion-toolbar-hover',
               )}
               onClick={() => setFusionWorkspace(ws)}
             >
               {ws}
               {fusionWorkspace === ws && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-fusion-orange" />
+                <div className="absolute bottom-0 left-2 right-2 h-[2px] bg-fusion-orange rounded-t-full" />
               )}
             </button>
           ))}
           <div className="flex-1" />
         </div>
 
-        {/* Row 2: Tool menus + tool ribbon */}
-        <div className="flex items-center gap-0.5 px-1 py-1">
-          {/* Sketch button (always visible) */}
-          <ToolBtn icon={Pencil} label="Create Sketch (S)" accent onClick={() => beginPlaneSelection()} />
-          <ToolSep />
-
-          {/* Dropdown menus */}
-          <DropdownMenu label="Create" tools={createTools} onSelect={(id) => {
-            if (id === 'box') { handleCreateBox(); return; }
-            if (id === 'cylinder') { handleCreateCylinder(); return; }
-            openFeatureDialog(id);
-          }} />
-          <DropdownMenu label="Modify" tools={modifyTools} onSelect={(id) => openFeatureDialog(id)} />
-          <DropdownMenu label="Assemble" tools={assembleTools} onSelect={() => {}} />
-          <DropdownMenu label="Construct" tools={constructTools} onSelect={(id) => openFeatureDialog(id)} />
-          <DropdownMenu label="Inspect" tools={inspectTools} onSelect={() => setTool('measure')} />
+        {/* Row 2: Fusion 360 ribbon — labeled icon buttons in groups */}
+        <div className="flex items-end gap-0 px-1.5 py-1 min-h-[52px]">
+          {/* Create Sketch — primary action, always visible */}
+          <RibbonBtn icon={Pencil} label="Sketch" accent onClick={() => beginPlaneSelection()} />
 
           <ToolSep />
 
-          {/* Quick-access icons for commonly used features */}
-          <ToolBtn icon={ArrowUpFromLine} label="Extrude (E)" active={activeTool === 'extrude'} onClick={() => openFeatureDialog('extrude')} />
-          <ToolBtn icon={CircleDot} label="Fillet (F)" active={activeTool === 'fillet'} onClick={() => openFeatureDialog('fillet')} />
-          <ToolBtn icon={Drill} label="Hole (H)" active={activeTool === 'hole'} onClick={() => openFeatureDialog('hole')} />
-          <ToolBtn icon={PlusCircle} label="Combine (B)" active={activeTool === 'boolean'} onClick={() => openFeatureDialog('boolean')} />
+          {/* CREATE group — most used solid creation tools */}
+          <div className="flex items-end gap-0">
+            <RibbonBtn icon={ArrowUpFromLine} label="Extrude" active={activeTool === 'extrude'} onClick={() => openFeatureDialog('extrude')} />
+            <RibbonBtn icon={RotateCcw} label="Revolve" onClick={() => openFeatureDialog('revolve')} />
+            <RibbonBtn icon={Wind} label="Sweep" onClick={() => openFeatureDialog('sweep')} />
+            <RibbonBtn icon={Layers} label="Loft" onClick={() => openFeatureDialog('loft')} />
+            <DropdownMenu label="Create ▾" tools={createTools} onSelect={(id) => {
+              if (id === 'box') { handleCreateBox(); return; }
+              if (id === 'cylinder') { handleCreateCylinder(); return; }
+              openFeatureDialog(id);
+            }} />
+          </div>
 
           <ToolSep />
 
-          {/* Selection */}
-          <ToolBtn icon={MousePointer2} label="Select (V)" active={activeTool === 'select'} onClick={() => setTool('select')} />
+          {/* MODIFY group */}
+          <div className="flex items-end gap-0">
+            <RibbonBtn icon={CircleDot} label="Fillet" active={activeTool === 'fillet'} onClick={() => openFeatureDialog('fillet')} />
+            <RibbonBtn icon={Triangle} label="Chamfer" onClick={() => openFeatureDialog('chamfer')} />
+            <RibbonBtn icon={BoxSelect} label="Shell" onClick={() => openFeatureDialog('shell')} />
+            <RibbonBtn icon={Drill} label="Hole" active={activeTool === 'hole'} onClick={() => openFeatureDialog('hole')} />
+            <DropdownMenu label="Modify ▾" tools={modifyTools} onSelect={(id) => openFeatureDialog(id)} />
+          </div>
+
+          <ToolSep />
+
+          {/* ASSEMBLE + CONSTRUCT */}
+          <div className="flex items-end gap-0">
+            <RibbonBtn icon={PlusCircle} label="Combine" onClick={() => openFeatureDialog('boolean')} />
+            <DropdownMenu label="Assemble ▾" tools={assembleTools} onSelect={() => {}} />
+            <DropdownMenu label="Construct ▾" tools={constructTools} onSelect={(id) => openFeatureDialog(id)} />
+          </div>
+
+          <ToolSep />
+
+          {/* INSPECT */}
+          <RibbonBtn icon={Ruler} label="Measure" active={activeTool === 'measure'} onClick={() => setTool('measure')} />
 
           <div className="flex-1" />
 
-          {/* Measure */}
-          <ToolBtn icon={Ruler} label="Measure (M)" active={activeTool === 'measure'} onClick={() => setTool('measure')} />
+          {/* Far right: Selection tool */}
+          <RibbonBtn icon={MousePointer2} label="Select" active={activeTool === 'select'} onClick={() => setTool('select')} />
         </div>
       </div>
     );
@@ -423,9 +434,73 @@ async function handleCreateCylinder() {
 // ── Sub-components ──
 
 function ToolSep() {
-  return <div className="w-px h-6 bg-fusion-border-light mx-1 flex-shrink-0" />;
+  return <div className="w-px h-[42px] bg-fusion-border-light/60 mx-1.5 shrink-0 self-center" />;
 }
 
+/**
+ * Fusion 360 ribbon button — icon on top, label below.
+ * This is the signature look of Fusion 360's toolbar.
+ */
+function RibbonBtn({
+  icon: Icon,
+  label,
+  active = false,
+  accent = false,
+  disabled = false,
+  onClick,
+  compact = false,
+}: {
+  icon: React.ElementType;
+  label: string;
+  active?: boolean;
+  accent?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  compact?: boolean;
+}) {
+  if (compact) {
+    return (
+      <button
+        className={clsx(
+          'flex items-center justify-center w-[28px] h-[28px] rounded-fusion transition-colors shrink-0',
+          active
+            ? 'bg-fusion-blue/20 text-fusion-blue'
+            : accent
+              ? 'text-fusion-orange hover:bg-fusion-orange/10'
+              : 'text-fusion-text-secondary hover:text-fusion-text hover:bg-fusion-toolbar-hover',
+          disabled && 'opacity-30 cursor-not-allowed',
+        )}
+        title={label}
+        disabled={disabled}
+        onClick={onClick}
+      >
+        <Icon size={16} />
+      </button>
+    );
+  }
+
+  return (
+    <button
+      className={clsx(
+        'flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-fusion transition-colors shrink-0 min-w-[44px]',
+        active
+          ? 'bg-fusion-blue/15 text-fusion-blue'
+          : accent
+            ? 'text-fusion-orange hover:bg-fusion-orange/10'
+            : 'text-fusion-text-secondary hover:text-fusion-text hover:bg-fusion-toolbar-hover',
+        disabled && 'opacity-30 cursor-not-allowed',
+      )}
+      title={label}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      <Icon size={18} />
+      <span className="text-[9px] leading-tight whitespace-nowrap">{label.split(' (')[0]}</span>
+    </button>
+  );
+}
+
+/** Compact icon-only button for sketch tool palette */
 function ToolBtn({
   icon: Icon,
   label,
@@ -444,7 +519,7 @@ function ToolBtn({
   return (
     <button
       className={clsx(
-        'p-1.5 rounded transition-colors flex-shrink-0',
+        'flex items-center justify-center w-[28px] h-[28px] rounded-fusion transition-colors shrink-0',
         active
           ? 'bg-fusion-blue/20 text-fusion-blue'
           : accent
@@ -456,7 +531,7 @@ function ToolBtn({
       disabled={disabled}
       onClick={onClick}
     >
-      <Icon size={17} />
+      <Icon size={16} />
     </button>
   );
 }

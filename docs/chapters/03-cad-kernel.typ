@@ -103,27 +103,38 @@ The kernel implements a *command pattern* for full undo/redo support:
 
 === 2D Sketch Constraints
 
-The sketch constraint solver supports *15 constraint types*, solved via Newton-Raphson iteration with sparse Jacobian matrices:
+The sketch constraint solver supports *19 constraint types*, solved via a 4-stage cascade solver:
 
 #table(
-  columns: (1fr, 1fr, 1fr),
-  table.header([*Geometric*], [*Dimensional*], [*Relational*]),
-  [Coincident], [Horizontal Distance], [Equal Length],
-  [Horizontal], [Vertical Distance], [Symmetric],
-  [Vertical], [Angle], [Tangent],
-  [Perpendicular], [Radius], [Concentric],
-  [Parallel], [Diameter], [Midpoint],
+  columns: (1fr, 1fr, 1fr, 1fr),
+  table.header([*Geometric*], [*Dimensional*], [*Relational*], [*Advanced*]),
+  [Coincident], [Horizontal Distance], [Equal Length], [Concentric],
+  [Horizontal], [Vertical Distance], [Symmetric], [EqualRadius],
+  [Vertical], [Angle], [Tangent], [PointOnLine],
+  [Perpendicular], [Radius], [Midpoint], [PointOnCircle],
+  [Parallel], [Diameter], [], [],
 )
 
-=== Solver Algorithm
+=== 4-Stage Cascade Solver
 
-The Newton-Raphson solver operates with these parameters:
+The solver uses a cascading strategy for maximum robustness — each stage acts as a fallback:
 
-- *Maximum iterations*: 50
+#table(
+  columns: (auto, auto, 1fr),
+  table.header([*Stage*], [*Algorithm*], [*Characteristics*]),
+  [1], [DogLeg Trust Region], [Default solver; excellent convergence for well-conditioned systems],
+  [2], [Levenberg-Marquardt], [Damped least-squares; handles near-singular Jacobians],
+  [3], [BFGS Quasi-Newton], [Gradient-based; good for large constraint sets],
+  [4], [Newton-Raphson], [Direct solve with line search; final fallback],
+)
+
+Solver parameters:
+
+- *Maximum iterations per stage*: 50
 - *Convergence tolerance*: 1×10⁻¹⁰
 - *Jacobian*: Sparse matrix via `nalgebra-sparse`
-- *Line search*: Backtracking with Armijo condition
-- *Fallback*: Levenberg-Marquardt damping for near-singular Jacobians
+- *Cascade trigger*: stage fails → next stage inherits current state
+- *Total tests*: 30 (constraint-solver crate)
 
 === 3D Assembly Constraints
 
@@ -144,9 +155,9 @@ Boolean operations (union, subtract, intersect) are implemented via `truck-shape
 #table(
   columns: (auto, auto, 1fr),
   table.header([*Operation*], [*Target*], [*Description*]),
-  [Union], [< 50 ms @ 10K faces], [Merge two solids into a single body],
-  [Subtract], [< 50 ms @ 10K faces], [Remove one solid from another (cuts, holes)],
-  [Intersect], [< 50 ms @ 10K faces], [Retain only the overlapping volume],
+  [Union], [\< 50 ms (10K faces)], [Merge two solids into a single body],
+  [Subtract], [\< 50 ms (10K faces)], [Remove one solid from another (cuts, holes)],
+  [Intersect], [\< 50 ms (10K faces)], [Retain only the overlapping volume],
 )
 
 === Tessellation
@@ -155,7 +166,7 @@ B-Rep surfaces are tessellated to triangle meshes for rendering:
 
 - *Parallel execution* via Rayon `par_iter` across faces
 - *Adaptive refinement* based on surface curvature
-- Target: *< 100 ms for 100K faces*
+- Target: *\< 100 ms for 100K faces*
 - Output: Vertex positions, normals, and UV coordinates
 
 == OpenCASCADE Fallback
@@ -165,3 +176,73 @@ When Truck lacks coverage (complex surface intersections, full IGES support), th
 #warning-box(title: "Limitation")[
   OpenCASCADE is *not WASM-compatible*. It is used only in desktop and cloud deployment modes. The WASM web build relies exclusively on Truck.
 ]
+
+== Sketch Operations System
+
+The cad-kernel includes a comprehensive *sketch operations system* inspired by Blender's CAD_Sketcher addon, implementing all 14 Blender/CAD patterns:
+
+=== Sketch Entities
+
+Seven entity types are supported in 2D sketches:
+
+#table(
+  columns: (auto, 1fr, auto),
+  table.header([*Entity*], [*Description*], [*Constraint Support*]),
+  [Point], [2D point in sketch plane], [Coincident, Fixed, PointOnLine, PointOnCircle],
+  [Line], [Infinite or bounded line segment], [Horizontal, Vertical, Parallel, Perpendicular, Tangent],
+  [Circle], [Circle defined by center + radius], [Concentric, EqualRadius, Tangent],
+  [Arc], [Circular arc (center, start angle, end angle)], [Tangent, Concentric, EqualRadius],
+  [Ellipse], [Ellipse with major/minor axes], [Concentric],
+  [Spline], [Cubic Bézier spline with control points], [Tangent, PointOnLine],
+  [Construction], [Reference geometry (not extruded)], [All constraint types],
+)
+
+=== Sketch Tools (StatefulTool Pattern)
+
+The tool system uses a *Blender-inspired StatefulTool* lifecycle with `ToolStateMachine`:
+
+#table(
+  columns: (auto, 1fr, auto),
+  table.header([*Tool*], [*States*], [*Description*]),
+  [`LineTool`], [Idle → First Point → Drawing], [Draw line segments with snap-to-grid/entity],
+  [`CircleTool`], [Idle → Center → Radius], [Draw circles by center + radius point],
+  [`ArcTool`], [Idle → Center → Start → End], [Draw arcs by center + start/end angles],
+  [`RectangleTool`], [Idle → Corner1 → Corner2], [Draw axis-aligned rectangles (4 lines + constraints)],
+  [`SplineTool`], [Idle → Points → Complete], [Draw cubic Bézier splines with control handles],
+  [`PointTool`], [Idle → Placing], [Place construction/reference points],
+  [`TrimTool`], [Idle → Selecting], [Trim entities at intersection points],
+)
+
+=== Snap Engine
+
+The snap engine (`snap.rs`, 569 lines) supports 7 snap types for precision drawing:
+
+- *Grid* — snap to configurable grid spacing
+- *Endpoint* — snap to entity endpoints
+- *Midpoint* — snap to entity midpoints
+- *Center* — snap to circle/arc centers
+- *Intersection* — snap to entity intersection points
+- *Perpendicular* — snap perpendicular to entities
+- *Tangent* — snap tangent to curves
+
+The `PickingColorMap` provides GPU-accelerated entity picking by assigning unique colors to sketch entities.
+
+=== Advanced Operations (sketch_ops.rs)
+
+The `sketch_ops.rs` module (1,238 lines, 13 tests) implements advanced sketch operations:
+
+- *Trim* — trim entities at intersections (line-line, line-circle, circle-circle)
+- *Bevel* — create chamfer/fillet at entity intersections
+- *Offset* — parallel offset of sketch profiles
+- *Entity Walker* — traverse connected entity chains for profile detection
+- *Bézier Utilities* — cubic Bézier evaluation, splitting, arc length
+- *Intersection Engine* — compute entity-entity intersection points
+- *Mesh Conversion* — convert sketch profiles to triangle meshes for preview
+
+=== Snapshot System
+
+The `snapshot.rs` module provides sketch state management:
+
+- *SketchSnapshot* — serializable snapshot of complete sketch state
+- *ToolSnapshotManager* — manages tool state across undo/redo boundaries
+- *ClipboardBuffer* — copy/paste sketch entities with constraint preservation

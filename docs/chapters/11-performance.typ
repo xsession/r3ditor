@@ -15,13 +15,13 @@ R3ditor is engineered to meet strict latency and throughput targets across all s
 #table(
   columns: (auto, auto, auto, 1fr),
   table.header([*Operation*], [*Target*], [*Budget*], [*Strategy*]),
-  [Tessellation (100K faces)], [< 16 ms], [1 frame], [Parallel tessellation via Rayon; adaptive LOD reduces face count],
-  [Boolean union/subtract], [< 100 ms], [6 frames], [Truck B-Rep kernel with spatial hash acceleration],
-  [Fillet/chamfer], [< 50 ms], [3 frames], [Edge subdivision on GPU; fallback to CPU for complex topology],
-  [Feature recognition], [< 200 ms], [12 frames], [Pattern matching on B-Rep graph; cached results in ECS component],
-  [Constraint solving], [< 10 ms], [< 1 frame], [Newton-Raphson with Jacobian caching; max 50 iterations],
-  [STL import (1M tri)], [< 500 ms], [30 frames], [`wasm-meshkit` parallel parser; memory-mapped file I/O],
-  [STEP import (medium)], [< 2 s], [—], [Streaming parser; UI remains responsive via async task],
+  [Tessellation (100K faces)], [\< 16 ms], [1 frame], [Parallel tessellation via Rayon; adaptive LOD reduces face count],
+  [Boolean union/subtract], [\< 100 ms], [6 frames], [Truck B-Rep kernel with spatial hash acceleration],
+  [Fillet/chamfer], [\< 50 ms], [3 frames], [Edge subdivision on GPU; fallback to CPU for complex topology],
+  [Feature recognition], [\< 200 ms], [12 frames], [Pattern matching on B-Rep graph; cached results in ECS component],
+  [Constraint solving], [\< 10 ms], [\< 1 frame], [Newton-Raphson with Jacobian caching; max 50 iterations],
+  [STL import (1M tri)], [\< 500 ms], [30 frames], [`wasm-meshkit` parallel parser; memory-mapped file I/O],
+  [STEP import (medium)], [\< 2 s], [—], [Streaming parser; UI remains responsive via async task],
 )
 
 === Rendering
@@ -31,10 +31,10 @@ R3ditor is engineered to meet strict latency and throughput targets across all s
   table.header([*Metric*], [*Target*], [*GPU Tier*], [*Strategy*]),
   [Frame rate (1M triangles)], [60 fps], [Mid-range], [Frustum culling + LOD + instanced draw calls],
   [Frame rate (5M triangles)], [30 fps], [Mid-range], [Aggressive LOD; GPU occlusion query],
-  [Ray pick latency], [< 5 ms], [Any], [GPU compute pick pass; single-pixel render target],
-  [Shader compile], [< 200 ms], [Any], [WGSL pre-compilation at startup; pipeline cache],
-  [Texture upload (4K)], [< 2 ms], [Any], [Staging buffer + async queue submit],
-  [View mode switch], [< 16 ms], [Any], [Hot-swap pipeline; pre-built pipeline variants],
+  [Ray pick latency], [\< 5 ms], [Any], [GPU compute pick pass; single-pixel render target],
+  [Shader compile], [\< 200 ms], [Any], [WGSL pre-compilation at startup; pipeline cache],
+  [Texture upload (4K)], [\< 2 ms], [Any], [Staging buffer + async queue submit],
+  [View mode switch], [\< 16 ms], [Any], [Hot-swap pipeline; pre-built pipeline variants],
 )
 
 === Manufacturing
@@ -42,11 +42,11 @@ R3ditor is engineered to meet strict latency and throughput targets across all s
 #table(
   columns: (auto, auto, auto, 1fr),
   table.header([*Operation*], [*Target*], [*Budget*], [*Strategy*]),
-  [DFM analysis (full)], [< 500 ms], [—], [Parallel rule evaluation via Rayon; early-exit on critical findings],
-  [Cost estimation], [< 200 ms], [—], [Cached material lookup; pre-computed machine rates],
-  [Tool estimation], [< 200 ms], [—], [Kienzle model with tabulated specific cutting force],
-  [Nesting (20 parts)], [< 2 s], [—], [Bottom-left fill + Rayon parallel rotation search],
-  [G-code generation], [< 1 s], [—], [Streaming writer; post-processor runs in parallel],
+  [DFM analysis (full)], [\< 500 ms], [—], [Parallel rule evaluation via Rayon; early-exit on critical findings],
+  [Cost estimation], [\< 200 ms], [—], [Cached material lookup; pre-computed machine rates],
+  [Tool estimation], [\< 200 ms], [—], [Kienzle model with tabulated specific cutting force],
+  [Nesting (20 parts)], [\< 2 s], [—], [Bottom-left fill + Rayon parallel rotation search],
+  [G-code generation], [\< 1 s], [—], [Streaming writer; post-processor runs in parallel],
 )
 
 == Memory Budget

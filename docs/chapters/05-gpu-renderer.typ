@@ -2,7 +2,13 @@
 
 = GPU Acceleration & Renderer
 
-== Rendering Architecture
+== Current Implementation Status
+
+#warning-box(title: "Implementation Note")[
+  The renderer crate currently provides *foundational infrastructure* (6 files, 553 lines) built on Three.js via the React/Tauri frontend. The advanced wgpu-based GPU pipeline described in this chapter represents the *target architecture* for future phases. The current implementation handles basic scene management, camera control (orbit/pan/zoom), and mesh display through the Three.js/React Three Fiber stack.
+]
+
+== Target Rendering Architecture
 
 The r3ditor renderer is built on *wgpu 28*, providing a cross-platform GPU abstraction over Vulkan 1.3, Metal 3, DirectX 12, and WebGPU. The rendering pipeline consists of *11 passes* orchestrated by the render engine.
 
@@ -60,11 +66,11 @@ Five WGSL shader files power the rendering:
 #table(
   columns: (auto, auto, auto, auto),
   table.header([*Shader*], [*ALU Ops*], [*Texture Reads*], [*Budget*]),
-  [PBR], [~120], [4 (albedo, normal, metal-rough, shadow)], [< 2 ms],
-  [Grid], [~30], [0], [< 0.5 ms],
-  [Outline], [~40], [2 (depth, normal)], [< 0.5 ms],
-  [DFM Viz], [~25], [1 (severity buffer)], [< 0.3 ms],
-  [Toolpath], [~35], [0], [< 0.3 ms],
+  [PBR], [~120], [4 (albedo, normal, metal-rough, shadow)], [\< 2 ms],
+  [Grid], [~30], [0], [\< 0.5 ms],
+  [Outline], [~40], [2 (depth, normal)], [\< 0.5 ms],
+  [DFM Viz], [~25], [1 (severity buffer)], [\< 0.3 ms],
+  [Toolpath], [~35], [0], [\< 0.3 ms],
 )
 
 == Visual Modes

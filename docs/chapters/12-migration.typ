@@ -12,6 +12,10 @@ R3ditor follows a *five-phase migration strategy* to transition from a legacy DF
 
 == Phase 1: Foundation Sprint (Weeks 1–4)
 
+#success-box(title: "Phase Complete")[
+  All foundation milestones delivered. Cargo workspace with 15 crates, Tauri shell, CI pipeline, and database migrations operational.
+]
+
 *Goal:* Establish the Rust workspace, build system, CI/CD pipeline, and core data structures.
 
 #table(
@@ -31,6 +35,10 @@ R3ditor follows a *five-phase migration strategy* to transition from a legacy DF
 
 == Phase 2: Geometry Engine (Weeks 5–10)
 
+#success-box(title: "Phase Complete")[
+  CAD kernel operational with 20 feature types, 4-stage constraint solver (19 types), full sketch system with 7 entity types, STL/STEP import/export, and undo/redo history. 125 kernel tests, 30 solver tests passing.
+]
+
 *Goal:* Implement the dual B-Rep kernel, parametric features, constraint solver, and mesh import/export.
 
 #table(
@@ -38,8 +46,8 @@ R3ditor follows a *five-phase migration strategy* to transition from a legacy DF
   table.header([*Milestone*], [*Deliverables*], [*Week*]),
   [M2.1], [Truck B-Rep integration: create box, cylinder, sphere primitives], [5],
   [M2.2], [Boolean operations (union, subtract, intersect) via Truck], [6],
-  [M2.3], [Parametric feature stack: extrude, revolve, fillet, chamfer, hole], [7],
-  [M2.4], [Constraint solver: Newton-Raphson with 15 constraint types], [8],
+  [M2.3], [Parametric feature stack: 20 feature types (extrude, revolve, fillet, chamfer, hole, loft, sweep, shell, draft, thread, linear/circular pattern, mirror, import STL)], [7],
+  [M2.4], [4-stage cascade constraint solver: DogLeg → LM → BFGS → NR with 19 constraint types], [8],
   [M2.5], [STL/OBJ import via `wasm-meshkit`; binary + ASCII detection], [8],
   [M2.6], [STEP import/export via `truck-stepio`], [9],
   [M2.7], [Undo/redo history with delta snapshots], [9],
@@ -49,6 +57,10 @@ R3ditor follows a *five-phase migration strategy* to transition from a legacy DF
 *Exit Criteria:* Can model a bracket with holes, fillets, and chamfers; STEP round-trip preserves topology.
 
 == Phase 3: Manufacturing Intelligence (Weeks 11–16)
+
+#success-box(title: "Phase Complete")[
+  CAM engine with 8 post-processors (Fanuc, Haas, Mazak, Heidenhain, Grbl, LinuxCNC, Marlin, Klipper), DFM analyzer (27 tests), nesting engine, and cost estimation pipeline. 64 CAM tests passing.
+]
 
 *Goal:* Implement DFM analysis, cost estimation, toolpath generation, and sheet metal operations.
 
@@ -62,12 +74,16 @@ R3ditor follows a *five-phase migration strategy* to transition from a legacy DF
   [M3.5], [Laser/plasma/waterjet cutting simulation with kerf compensation], [13],
   [M3.6], [Nesting engine: bottom-left fill + parallel rotation search], [14],
   [M3.7], [Toolpath generation: roughing, finishing, contouring], [15],
-  [M3.8], [G-code post-processors: Fanuc, Siemens, Haas, Grbl], [16],
+  [M3.8], [G-code post-processors: Fanuc, Haas, Mazak, Heidenhain, Grbl, LinuxCNC, Marlin, Klipper], [16],
 )
 
 *Exit Criteria:* Upload STL → auto-DFM → cost quote → nested layout → G-code download workflow complete.
 
 == Phase 4: Desktop & Plugins (Weeks 17–22)
+
+#info-box(title: "Phase In Progress")[
+  Tauri desktop app functional with 37 IPC commands, React frontend with Zustand store (1,062 lines, 319 tests), Three.js viewport, and complete sketch tool system (7 tools, StatefulTool pattern). Plugin runtime operational (wasmtime 28, 7 tests). Remaining: view modes, auto-updater, packaging.
+]
 
 *Goal:* Polish the desktop application, implement the plugin system, and release the first public beta.
 
@@ -103,7 +119,7 @@ R3ditor follows a *five-phase migration strategy* to transition from a legacy DF
   [M5.8], [GA release; SLA commitments; on-call rotation established], [30],
 )
 
-*Exit Criteria:* Cloud API at <100ms p99; Shopify integration live; GA release published.
+*Exit Criteria:* Cloud API at \<100ms p99; Shopify integration live; GA release published.
 
 == Risk Mitigation
 

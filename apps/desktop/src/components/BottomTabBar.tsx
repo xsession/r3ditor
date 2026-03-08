@@ -97,7 +97,7 @@ export function BottomTabBar() {
   }, []);
 
   return (
-    <div className="flex items-center h-9 bg-fusion-timeline border-t border-fusion-border select-none">
+    <div className="flex items-center h-[34px] bg-fusion-timeline border-t border-fusion-border select-none shrink-0">
       {/* Timeline label */}
       <div className="flex items-center gap-1 px-2 text-[10px] text-fusion-text-disabled font-medium flex-shrink-0">
         <GripVertical size={10} />

@@ -1,0 +1,626 @@
+{
+  "format": {
+    "version": "1.0.0",
+    "generator": "r3ditor",
+    "createdAt": "2026-03-07T07:19:53.881Z",
+    "modifiedAt": "2026-03-07T07:19:53.881Z"
+  },
+  "document": {
+    "name": "CaliCat Calibration",
+    "tabs": [
+      {
+        "id": "design1",
+        "name": "Design 1",
+        "type": "design",
+        "active": true
+      }
+    ],
+    "activeTabId": "design1",
+    "fusionWorkspace": "SOLID",
+    "workspaceMode": "design"
+  },
+  "entities": [
+    {
+      "id": "calicat_calicat_body",
+      "name": "CaliCat Body",
+      "visible": true,
+      "locked": false,
+      "suppressed": false,
+      "faceCount": 6,
+      "edgeCount": 12,
+      "vertexCount": 8,
+      "transform": {
+        "position": [
+          0,
+          7,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "type": "box"
+    },
+    {
+      "id": "calicat_calicat_head",
+      "name": "CaliCat Head",
+      "visible": true,
+      "locked": false,
+      "suppressed": false,
+      "faceCount": 6,
+      "edgeCount": 12,
+      "vertexCount": 8,
+      "transform": {
+        "position": [
+          0,
+          20.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "type": "box"
+    },
+    {
+      "id": "calicat_calicat_left_ear",
+      "name": "CaliCat Left Ear",
+      "visible": true,
+      "locked": false,
+      "suppressed": false,
+      "faceCount": 6,
+      "edgeCount": 12,
+      "vertexCount": 8,
+      "transform": {
+        "position": [
+          -4,
+          29.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "type": "box"
+    },
+    {
+      "id": "calicat_calicat_right_ear",
+      "name": "CaliCat Right Ear",
+      "visible": true,
+      "locked": false,
+      "suppressed": false,
+      "faceCount": 6,
+      "edgeCount": 12,
+      "vertexCount": 8,
+      "transform": {
+        "position": [
+          4,
+          29.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "type": "box"
+    },
+    {
+      "id": "calicat_calicat_tail",
+      "name": "CaliCat Tail",
+      "visible": true,
+      "locked": false,
+      "suppressed": false,
+      "faceCount": 6,
+      "edgeCount": 12,
+      "vertexCount": 8,
+      "transform": {
+        "position": [
+          -4.039035439491272,
+          21.88110637664795,
+          -10
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "type": "box"
+    }
+  ],
+  "timeline": [
+    {
+      "id": "sk1",
+      "name": "Sketch 1",
+      "type": "sketch",
+      "suppressed": false,
+      "hasError": false
+    },
+    {
+      "id": "sk2",
+      "name": "Sketch 2",
+      "type": "sketch",
+      "suppressed": false,
+      "hasError": false
+    },
+    {
+      "id": "ext_body",
+      "name": "Extrude Body (20mm)",
+      "type": "extrude",
+      "suppressed": false,
+      "hasError": false
+    },
+    {
+      "id": "ext_head",
+      "name": "Extrude Head (20mm)",
+      "type": "extrude",
+      "suppressed": false,
+      "hasError": false
+    },
+    {
+      "id": "ext_ear_l",
+      "name": "Extrude Left Ear",
+      "type": "extrude",
+      "suppressed": false,
+      "hasError": false
+    },
+    {
+      "id": "ext_ear_r",
+      "name": "Extrude Right Ear",
+      "type": "extrude",
+      "suppressed": false,
+      "hasError": false
+    },
+    {
+      "id": "sweep_tail",
+      "name": "Sweep Tail",
+      "type": "sweep",
+      "suppressed": false,
+      "hasError": false
+    }
+  ],
+  "browserTree": [
+    {
+      "id": "doc_settings",
+      "name": "Document Settings",
+      "type": "documentSettings",
+      "status": "valid",
+      "expanded": false,
+      "visible": true,
+      "children": [
+        {
+          "id": "named_views",
+          "name": "Named Views",
+          "type": "namedViews",
+          "status": "valid",
+          "expanded": false,
+          "visible": true,
+          "children": []
+        },
+        {
+          "id": "analysis",
+          "name": "Analysis",
+          "type": "analysis",
+          "status": "valid",
+          "expanded": false,
+          "visible": true,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "comp1",
+      "name": "Component1",
+      "type": "component",
+      "status": "valid",
+      "expanded": true,
+      "visible": true,
+      "children": [
+        {
+          "id": "origin",
+          "name": "Origin",
+          "type": "origin",
+          "status": "valid",
+          "expanded": false,
+          "visible": true,
+          "children": [
+            {
+              "id": "plane_xy",
+              "name": "XY Plane",
+              "type": "plane",
+              "status": "valid",
+              "expanded": false,
+              "visible": true,
+              "children": []
+            },
+            {
+              "id": "plane_xz",
+              "name": "XZ Plane",
+              "type": "plane",
+              "status": "valid",
+              "expanded": false,
+              "visible": true,
+              "children": []
+            },
+            {
+              "id": "plane_yz",
+              "name": "YZ Plane",
+              "type": "plane",
+              "status": "valid",
+              "expanded": false,
+              "visible": true,
+              "children": []
+            },
+            {
+              "id": "axis_x",
+              "name": "X Axis",
+              "type": "axis",
+              "status": "valid",
+              "expanded": false,
+              "visible": true,
+              "children": []
+            },
+            {
+              "id": "axis_y",
+              "name": "Y Axis",
+              "type": "axis",
+              "status": "valid",
+              "expanded": false,
+              "visible": true,
+              "children": []
+            },
+            {
+              "id": "axis_z",
+              "name": "Z Axis",
+              "type": "axis",
+              "status": "valid",
+              "expanded": false,
+              "visible": true,
+              "children": []
+            },
+            {
+              "id": "origin_pt",
+              "name": "Origin",
+              "type": "point",
+              "status": "valid",
+              "expanded": false,
+              "visible": true,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "bodies",
+          "name": "Bodies",
+          "type": "group",
+          "status": "valid",
+          "expanded": true,
+          "visible": true,
+          "children": []
+        },
+        {
+          "id": "sketches",
+          "name": "Sketches",
+          "type": "group",
+          "status": "valid",
+          "expanded": true,
+          "visible": true,
+          "children": [
+            {
+              "id": "sketch_1772867993878",
+              "name": "Sketch 1",
+              "type": "sketch",
+              "status": "valid",
+              "expanded": false,
+              "visible": true,
+              "children": []
+            },
+            {
+              "id": "sketch_1772867993880",
+              "name": "Sketch 2",
+              "type": "sketch",
+              "status": "valid",
+              "expanded": false,
+              "visible": true,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "construction",
+          "name": "Construction",
+          "type": "construction",
+          "status": "valid",
+          "expanded": false,
+          "visible": true,
+          "children": []
+        }
+      ]
+    }
+  ],
+  "sketches": [
+    {
+      "id": "sketch_body",
+      "name": "Sketch 1 — Body Profile",
+      "plane": "XY",
+      "planeInfo": {
+        "type": "XY",
+        "origin": [
+          0,
+          0,
+          0
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "uAxis": [
+          1,
+          0,
+          0
+        ],
+        "vAxis": [
+          0,
+          1,
+          0
+        ]
+      },
+      "points": [
+        {
+          "id": "body_p0",
+          "x": -10,
+          "y": 0,
+          "isConstruction": false
+        },
+        {
+          "id": "body_p1",
+          "x": 10,
+          "y": 0,
+          "isConstruction": false
+        },
+        {
+          "id": "body_p2",
+          "x": 10,
+          "y": 14,
+          "isConstruction": false
+        },
+        {
+          "id": "body_p3",
+          "x": -10,
+          "y": 14,
+          "isConstruction": false
+        }
+      ],
+      "segments": [
+        {
+          "id": "body_rect",
+          "type": "rectangle",
+          "points": [
+            "body_p0",
+            "body_p1",
+            "body_p2",
+            "body_p3"
+          ],
+          "isConstruction": false
+        }
+      ],
+      "constraints": [],
+      "dimensions": [
+        {
+          "id": "d_bw",
+          "type": "distance",
+          "entityIds": [
+            "body_p0",
+            "body_p1"
+          ],
+          "value": 20,
+          "driving": true
+        },
+        {
+          "id": "d_bh",
+          "type": "distance",
+          "entityIds": [
+            "body_p1",
+            "body_p2"
+          ],
+          "value": 14,
+          "driving": true
+        }
+      ],
+      "dof": 6
+    },
+    {
+      "id": "sketch_head",
+      "name": "Sketch 2 — Head Profile",
+      "plane": "XY",
+      "planeInfo": {
+        "type": "XY",
+        "origin": [
+          0,
+          14,
+          0
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ],
+        "uAxis": [
+          1,
+          0,
+          0
+        ],
+        "vAxis": [
+          0,
+          1,
+          0
+        ]
+      },
+      "points": [
+        {
+          "id": "head_p0",
+          "x": -10,
+          "y": 14,
+          "isConstruction": false
+        },
+        {
+          "id": "head_p1",
+          "x": 10,
+          "y": 14,
+          "isConstruction": false
+        },
+        {
+          "id": "head_p2",
+          "x": 10,
+          "y": 27,
+          "isConstruction": false
+        },
+        {
+          "id": "head_p3",
+          "x": -10,
+          "y": 27,
+          "isConstruction": false
+        }
+      ],
+      "segments": [
+        {
+          "id": "head_rect",
+          "type": "rectangle",
+          "points": [
+            "head_p0",
+            "head_p1",
+            "head_p2",
+            "head_p3"
+          ],
+          "isConstruction": false
+        }
+      ],
+      "constraints": [],
+      "dimensions": [
+        {
+          "id": "d_hw",
+          "type": "distance",
+          "entityIds": [
+            "head_p0",
+            "head_p1"
+          ],
+          "value": 20,
+          "driving": true
+        },
+        {
+          "id": "d_hh",
+          "type": "distance",
+          "entityIds": [
+            "head_p1",
+            "head_p2"
+          ],
+          "value": 13,
+          "driving": true
+        }
+      ],
+      "dof": 6
+    }
+  ],
+  "features": [
+    {
+      "id": "ext_body",
+      "name": "Extrude Body",
+      "type": "extrude",
+      "params": {
+        "distance": 20,
+        "symmetric": true
+      },
+      "sketchRef": "sketch_body"
+    },
+    {
+      "id": "ext_head",
+      "name": "Extrude Head",
+      "type": "extrude",
+      "params": {
+        "distance": 20,
+        "symmetric": true
+      },
+      "sketchRef": "sketch_head"
+    },
+    {
+      "id": "ext_ear_l",
+      "name": "Extrude Left Ear",
+      "type": "extrude",
+      "params": {
+        "distance": 3,
+        "symmetric": false
+      }
+    },
+    {
+      "id": "ext_ear_r",
+      "name": "Extrude Right Ear",
+      "type": "extrude",
+      "params": {
+        "distance": 3,
+        "symmetric": false
+      }
+    },
+    {
+      "id": "sweep_tail",
+      "name": "Sweep Tail",
+      "type": "sweep",
+      "params": {
+        "orientation": "perpendicular"
+      }
+    }
+  ],
+  "mates": [],
+  "viewSettings": {
+    "viewStyle": "shadedEdges",
+    "cameraProjection": "perspective",
+    "navigationStyle": "fusion360",
+    "showGrid": true,
+    "showAxes": true,
+    "showOrigin": true,
+    "showPlanes": true
+  },
+  "statistics": {
+    "entityCount": 5,
+    "timelineEntryCount": 7,
+    "sketchCount": 2,
+    "featureCount": 5,
+    "mateCount": 0,
+    "totalFaces": 30,
+    "totalEdges": 60,
+    "totalVertices": 40
+  }
+}

@@ -85,18 +85,19 @@ R3ditor supports a comprehensive set of industry-standard import formats:
 
 == G-Code Post-Processors
 
-Seven built-in post-processors generate machine-specific G-code:
+Eight built-in post-processors generate machine-specific G-code:
 
 #table(
   columns: (auto, auto, 1fr),
   table.header([*Post-Processor*], [*Target*], [*Features*]),
   [Fanuc], [Fanuc 0i/30i CNC], [Standard G/M codes, canned cycles G81–G89, macro B],
-  [Siemens 840D], [Sinumerik 840D sl], [ShopMill/ShopTurn cycles, TRANSMIT, spline interpolation],
   [Haas], [Haas VF/ST series], [Macros, visual programming, tool setting cycles],
   [Mazak], [Mazatrol Matrix], [Conversational format + EIA/ISO G-code hybrid],
-  [TRUMPF], [TruLaser / TruPunch], [Laser power modulation, pierce sequences, micro-joints],
+  [Heidenhain], [Heidenhain TNC], [Conversational programming, cycle definitions, FK programming],
   [Grbl], [Open-source CNC], [Reduced instruction set for hobby/desktop mills],
   [LinuxCNC], [LinuxCNC], [O-word subroutines, named parameters, remapping],
+  [Marlin], [3D Printer / CNC], [G-code for FDM printers and simple CNC routers],
+  [Klipper], [Klipper firmware], [Extended G-code with macro support, pressure advance],
 )
 
 == File I/O Pipeline

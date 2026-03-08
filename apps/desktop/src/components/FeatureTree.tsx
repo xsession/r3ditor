@@ -77,13 +77,13 @@ export function FeatureTree() {
   };
 
   return (
-    <div className="w-56 bg-fusion-panel border-r border-fusion-border flex flex-col relative">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-fusion-panel-header border-b border-fusion-border">
-        <h2 className="text-[11px] font-semibold text-fusion-text uppercase tracking-wider">
+    <div className="w-[240px] bg-fusion-panel border-r border-fusion-border flex flex-col relative shrink-0">
+      {/* Header — Fusion 360 style: BROWSER title with filter/settings */}
+      <div className="flex items-center justify-between px-3 h-[30px] bg-fusion-panel-header border-b border-fusion-border shrink-0">
+        <h2 className="text-[10px] font-bold text-fusion-text-secondary uppercase tracking-[0.08em]">
           Browser
         </h2>
-        <button className="p-0.5 text-fusion-text-secondary hover:text-fusion-text rounded hover:bg-fusion-hover">
+        <button className="p-0.5 text-fusion-text-disabled hover:text-fusion-text-secondary rounded-fusion hover:bg-fusion-hover transition-colors">
           <Settings size={11} />
         </button>
       </div>
@@ -175,15 +175,15 @@ function BrowserTreeNode({
     <>
       <div
         className={clsx(
-          'group flex items-center gap-1 pr-1 py-[3px] cursor-pointer text-xs transition-colors',
+          'group flex items-center gap-1 pr-1 py-[3px] cursor-pointer text-[11px] transition-colors',
           isSelected
-            ? 'bg-fusion-blue/15 text-fusion-blue'
+            ? 'bg-fusion-blue/12 text-fusion-blue border-l-2 border-fusion-blue'
             : isComponent
-              ? 'text-fusion-text hover:bg-fusion-hover'
-              : 'text-fusion-text-secondary hover:bg-fusion-hover',
+              ? 'text-fusion-text hover:bg-fusion-hover border-l-2 border-transparent'
+              : 'text-fusion-text-secondary hover:bg-fusion-hover border-l-2 border-transparent',
           node.status === 'suppressed' && 'line-through opacity-50',
         )}
-        style={{ paddingLeft: `${depth * 14 + 6}px` }}
+        style={{ paddingLeft: `${depth * 16 + 4}px` }}
         onClick={() => {
           if (hasChildren) onToggle(node.id);
           onSelect(node.id);

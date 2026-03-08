@@ -122,7 +122,7 @@ The toolpath pipeline produces machine-ready G-code:
 
 === G-code Post-Processors
 
-Seven machine controller formats are supported:
+*Eight* machine controller formats are supported:
 
 #grid(
   columns: (1fr, 1fr, 1fr, 1fr),
@@ -131,10 +131,11 @@ Seven machine controller formats are supported:
   tech-badge("Fanuc", color: r3ditor-blue),
   tech-badge("Haas", color: r3ditor-indigo),
   tech-badge("Heidenhain", color: r3ditor-purple),
-  tech-badge("Siemens 840D", color: r3ditor-sky),
   tech-badge("Mazak", color: r3ditor-green),
   tech-badge("Grbl", color: r3ditor-accent),
   tech-badge("LinuxCNC", color: r3ditor-red),
+  tech-badge("Marlin", color: r3ditor-sky),
+  tech-badge("Klipper", color: r3ditor-blue),
 )
 
 == Nesting Optimization
@@ -142,7 +143,7 @@ Seven machine controller formats are supported:
 The nesting engine optimizes part placement on sheet stock to minimize material waste:
 
 - *Algorithm*: Bottom-left fill with rotation (0°, 90°, 180°, 270°)
-- *Target*: < 1 second for 100 parts
+- *Target*: \< 1 second for 100 parts
 - *Metrics*: Material utilization percentage, waste area, nested count
 - *Output*: Part placement coordinates + cutting path order
 

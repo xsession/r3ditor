@@ -23,13 +23,13 @@ export function SelectionFilterBar() {
   if (isSketchActive) return null;
 
   return (
-    <div className="flex items-center gap-0.5 px-2 py-0.5 bg-fusion-panel border-b border-fusion-border select-none">
-      <span className="text-[9px] text-fusion-text-disabled uppercase tracking-wider mr-2">Selection:</span>
+    <div className="flex items-center gap-0.5 h-[24px] px-2 bg-fusion-toolbar border-b border-[#2a2a2a] select-none shrink-0">
+      <span className="text-[9px] text-fusion-text-disabled uppercase tracking-[0.06em] mr-2 shrink-0">Filter:</span>
       {filters.map((f) => (
         <button
           key={f.id}
           className={clsx(
-            'flex items-center gap-1 px-2 py-0.5 rounded text-[10px] transition-colors',
+            'flex items-center gap-1 px-2 h-[18px] rounded-fusion text-[10px] transition-colors shrink-0',
             selectionFilter === f.id
               ? 'bg-fusion-blue/15 text-fusion-blue font-medium'
               : 'text-fusion-text-disabled hover:text-fusion-text-secondary hover:bg-fusion-hover',

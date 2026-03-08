@@ -41,23 +41,23 @@ These crates implement the domain-specific computation:
   row-gutter: 12pt,
   [
     #crate-ref("cad-kernel") \
-    Truck-based B-Rep kernel with NURBS surfaces, boolean operations, parametric feature tree, and history-based undo/redo. Depends on `truck-*` 0.6, `glam`, `nalgebra`, and `rayon`.
+    Truck-based B-Rep kernel with NURBS surfaces, boolean operations, parametric feature tree (20 feature types), and history-based undo/redo. Includes a full *sketch system* with 7 entity types, trim/bevel/offset operations, StatefulTool machine, snap engine, and picking color map. 13 modules, 10,269 lines, 125 tests.
   ],
   [
     #crate-ref("cam-engine") \
-    CNC physics (6 models), sheet metal cutting (4 methods), bending (3 formulas), toolpath generation, nesting optimization, and G-code post-processing for 7 machine types.
+    CNC physics (6 models), sheet metal cutting (4 methods), bending (3 formulas), toolpath generation, nesting optimization, and G-code post-processing for *8 machine types* (Fanuc, Haas, Mazak, LinuxCNC, Grbl, Marlin, Klipper, Heidenhain). 6 files, 1,555 lines, 64 tests.
   ],
   [
     #crate-ref("constraint-solver") \
-    2D sketch constraint solver (15 constraint types) and 3D assembly constraint solver. Uses Newton-Raphson iteration with sparse Jacobian matrices via `nalgebra-sparse`.
+    2D sketch constraint solver with *19 constraint types* and 3D assembly constraint solver. Uses a *4-stage cascade solver* (DogLeg → Levenberg-Marquardt → BFGS → Newton-Raphson) with sparse Jacobian matrices via `nalgebra-sparse`. 4 files, 1,915 lines, 30 tests.
   ],
   [
     #crate-ref("dfm-analyzer") \
-    Design-for-manufacturability analysis with rule-based checks, severity scoring (0–100), and actionable feedback. Pluggable rule system for custom industry checks.
+    Design-for-manufacturability analysis with rule-based checks, severity scoring (0–100), and actionable feedback. Pluggable rule system for custom industry checks. 3 files, 561 lines, 27 tests.
   ],
   [
     #crate-ref("renderer") \
-    wgpu 28 render engine with 11-pass pipeline, 8 visual modes, PBR Cook-Torrance BRDF, camera controller (orbit/pan/zoom), and 5 WGSL shader modules.
+    Three.js-based rendering infrastructure providing scene management, camera controller (orbit/pan/zoom), and mesh display. Currently 553 lines of foundational code — advanced GPU pipeline planned for future phases.
   ],
 )
 
@@ -68,7 +68,7 @@ These crates implement the domain-specific computation:
   column-gutter: 12pt,
   [
     #crate-ref("editor-shell") \
-    ECS orchestrator that wires all engines together with a 4-stage frame schedule. Manages input, commands, and the UI integration layer.
+    Orchestrator that wires all engines together via the `World` struct. Manages 22 `EditorCommand` variants, 21 tool types (7 sketch tools with `StatefulTool` lifecycle), sketch mode, `ToolSnapshotManager`, `ClipboardBuffer`, and the Tauri IPC bridge. 6 files, 1,301 lines, 22 tests.
   ],
   [
     #crate-ref("plugin-runtime") \
@@ -93,7 +93,7 @@ These crates implement the domain-specific computation:
     #crate-ref("worker-analysis") / #crate-ref("worker-cad") / #crate-ref("worker-cam") — Redis stream consumers for DFM analysis, geometry import, and toolpath/nesting computation respectively.
   ],
   [
-    *Desktop App* (`apps/desktop`) — Tauri 2.2 shell with 11 IPC commands, React/TypeScript frontend, and native file system access.
+    *Desktop App* (`apps/desktop`) — Tauri 2.2 shell with *37 IPC commands* (`commands.rs`, 692 lines), React 18.3 + TypeScript 5.6 frontend (1,062-line Zustand store), and native file system access.
   ],
   [
     #crate-ref("bench") — Criterion benchmark suite covering tessellation, constraint solving, CNC estimation, nesting, and DFM analysis with CI performance gates.
@@ -112,7 +112,7 @@ The editor operates on a *4-stage frame schedule*, targeting a 16.67 ms budget (
   columns: (auto, auto, 1fr, auto),
   table.header([*Stage*], [*Budget*], [*Responsibilities*], [*Threading*]),
   [① Input], [~2 ms], [Poll keyboard, mouse, touch events; update camera; enqueue commands], [Single thread],
-  [② Constraint], [~3 ms], [Solve 2D sketch constraints; update dimension values; Newton-Raphson iterate], [Single thread],
+  [② Constraint], [~3 ms], [Solve 2D sketch constraints via 4-stage cascade (DogLeg → LM → BFGS → NR); update dimension values], [Single thread],
   [③ Geometry], [~5 ms], [Evaluate B-Rep features; boolean ops; tessellation; upload mesh buffers], [Rayon parallel],
   [④ Render], [~6 ms], [Update scene graph; batch draw calls; run 11-pass pipeline; present frame], [GPU-bound],
 )
@@ -125,12 +125,12 @@ The editor operates on a *4-stage frame schedule*, targeting a 16.67 ms budget (
 
 The data flows through the system in a well-defined pipeline:
 
-+ *User Input* → captured by `winit` event loop → dispatched to `EditorCommand` queue
-+ *Commands* → processed by editor shell → modify `FeatureTree` and `ConstraintSet`
-+ *Constraint Solver* → resolves sketch constraints → updates parametric dimensions
++ *User Input* → captured by React frontend → dispatched via Tauri IPC (`invoke`) → `EditorCommand` queue
++ *Commands* → processed by editor shell (`World` struct) → modify `FeatureTree`, `ConstraintSet`, and `SketchState`
++ *Constraint Solver* → resolves sketch constraints via 4-stage cascade → updates parametric dimensions
 + *CAD Kernel* → replays feature tree → evaluates B-Rep geometry → produces `BRepModel`
 + *Tessellation* → converts NURBS surfaces → triangle mesh (parallel via Rayon)
-+ *GPU Upload* → mesh data → vertex/index buffers via wgpu
-+ *Render Pipeline* → 11-pass rendering → frame present to display
-+ *DFM Analysis* → runs in background → updates severity overlay
-+ *CAM Engine* → generates toolpaths → produces G-code on demand
++ *Frontend Sync* → mesh data → Tauri events → Three.js scene update
++ *Render* → Three.js renders 3D viewport in React webview
++ *DFM Analysis* → runs on demand → returns severity findings
++ *CAM Engine* → generates toolpaths → produces G-code via 8 post-processors

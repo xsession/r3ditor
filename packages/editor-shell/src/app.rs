@@ -3,6 +3,13 @@
 use tracing::info;
 use uuid::Uuid;
 
+use cad_kernel::sketch::Point2D;
+use cad_kernel::snap::{SnapConfig, SnapEngine, SnapResult, SnapType};
+use cad_kernel::tools::{
+    ToolStateMachine, ToolInput, ToolModalResult, StatefulTool,
+    LineTool, CircleTool, ArcTool, RectangleTool,
+};
+
 use crate::ecs::World;
 use crate::commands::EditorCommand;
 use renderer::Viewport;
@@ -21,6 +28,14 @@ pub struct EditorApp {
     pub active_tool: Tool,
     /// Selected entity IDs
     pub selection: Vec<Uuid>,
+
+    // ── Sketch Tool System ──
+    /// Current stateful sketch tool (if any)
+    sketch_tool: Option<Box<dyn StatefulTool>>,
+    /// Tool state machine for the active sketch tool
+    tool_machine: Option<ToolStateMachine>,
+    /// Last snap result (for visual feedback)
+    pub last_snap: Option<SnapResult>,
 }
 
 /// Available editing tools
@@ -38,6 +53,14 @@ pub enum Tool {
     Boolean,
     Measure,
     Section,
+    // ── Sketch Tools ──
+    SketchLine,
+    SketchCircle,
+    SketchArc,
+    SketchRectangle,
+    SketchTrim,
+    SketchOffset,
+    SketchBevel,
 }
 
 impl EditorApp {
@@ -50,6 +73,9 @@ impl EditorApp {
             running: true,
             active_tool: Tool::Select,
             selection: Vec::new(),
+            sketch_tool: None,
+            tool_machine: None,
+            last_snap: None,
         }
     }
 
@@ -85,8 +111,109 @@ impl EditorApp {
 
     /// Set the active tool
     pub fn set_tool(&mut self, tool: Tool) {
+        // Cancel any active sketch tool
+        self.cancel_sketch_tool();
+
         self.active_tool = tool;
         info!("Active tool: {:?}", tool);
+
+        // If a sketch tool, initialize the tool + state machine
+        match tool {
+            Tool::SketchLine => self.activate_sketch_tool(Box::new(LineTool)),
+            Tool::SketchCircle => self.activate_sketch_tool(Box::new(CircleTool)),
+            Tool::SketchArc => self.activate_sketch_tool(Box::new(ArcTool)),
+            Tool::SketchRectangle => self.activate_sketch_tool(Box::new(RectangleTool)),
+            _ => {}
+        }
+    }
+
+    /// Activate a sketch tool with its state machine
+    fn activate_sketch_tool(&mut self, tool: Box<dyn StatefulTool>) {
+        let state_count = tool.states().len();
+        let mut machine = ToolStateMachine::new(state_count);
+
+        // Invoke the tool on the active sketch
+        if let Some(sketch) = self.world.active_sketch_mut() {
+            let sel: Vec<Uuid> = self.selection.clone();
+            machine.invoke(tool.as_ref(), sketch, &sel);
+        }
+
+        self.tool_machine = Some(machine);
+        self.sketch_tool = Some(tool);
+    }
+
+    /// Cancel the active sketch tool
+    fn cancel_sketch_tool(&mut self) {
+        if let (Some(tool), Some(machine)) = (self.sketch_tool.as_mut(), self.tool_machine.as_mut()) {
+            if machine.is_running() {
+                if let Some(sketch) = self.world.active_sketch_mut() {
+                    machine.handle_input(tool.as_mut(), sketch, ToolInput::Escape);
+                }
+            }
+        }
+        self.sketch_tool = None;
+        self.tool_machine = None;
+    }
+
+    /// Send a tool input to the active sketch tool
+    pub fn send_tool_input(&mut self, input: ToolInput) -> Option<ToolModalResult> {
+        let tool = self.sketch_tool.as_mut()?;
+        let machine = self.tool_machine.as_mut()?;
+        let sketch = self.world.active_sketch_mut()?;
+
+        let result = machine.handle_input(tool.as_mut(), sketch, input);
+
+        match result {
+            ToolModalResult::Finished | ToolModalResult::Cancelled => {
+                // Reset to select tool after completion
+                self.sketch_tool = None;
+                self.tool_machine = None;
+                self.active_tool = Tool::Select;
+            }
+            ToolModalResult::ContinuousDraw => {
+                // Keep tool active for continuous drawing
+            }
+            _ => {}
+        }
+
+        Some(result)
+    }
+
+    /// Compute snap for the current cursor position (in sketch coordinates)
+    pub fn compute_snap(&mut self, cursor: Point2D, reference_point: Option<Point2D>) -> SnapResult {
+        let exclude: Vec<Uuid> = Vec::new();
+        if let Some(sketch) = self.world.active_sketch() {
+            let result = SnapEngine::find_snap(
+                sketch,
+                cursor,
+                &self.world.snap_config,
+                &exclude,
+                reference_point,
+            );
+            self.last_snap = Some(result.clone());
+            result
+        } else {
+            SnapResult {
+                position: cursor,
+                snap_type: SnapType::None,
+                source_entity: None,
+                secondary_entity: None,
+                distance: 0.0,
+            }
+        }
+    }
+
+    /// Check if a sketch tool is currently active
+    pub fn is_sketch_tool_active(&self) -> bool {
+        self.tool_machine.as_ref().map(|m| m.is_running()).unwrap_or(false)
+    }
+
+    /// Get the current sketch tool's status text
+    pub fn sketch_tool_status(&self) -> Option<String> {
+        let tool = self.sketch_tool.as_ref()?;
+        let machine = self.tool_machine.as_ref()?;
+        let state_def = machine.current_state_def(tool.as_ref())?;
+        Some(format!("{}: {}", tool.name(), state_def.description))
     }
 
     /// Select an entity
@@ -128,6 +255,18 @@ mod tests {
         assert_eq!(app.active_tool, Tool::Extrude);
         app.set_tool(Tool::Sketch);
         assert_eq!(app.active_tool, Tool::Sketch);
+    }
+
+    #[test]
+    fn test_set_sketch_tool() {
+        let mut app = EditorApp::new();
+        // Create and activate a sketch first
+        let sketch_id = app.world.create_sketch("Test");
+        app.world.set_active_sketch(Some(sketch_id));
+
+        app.set_tool(Tool::SketchLine);
+        assert_eq!(app.active_tool, Tool::SketchLine);
+        assert!(app.is_sketch_tool_active());
     }
 
     #[test]
@@ -207,7 +346,72 @@ mod tests {
             Tool::Sketch, Tool::Extrude, Tool::Revolve,
             Tool::Fillet, Tool::Chamfer, Tool::Boolean,
             Tool::Measure, Tool::Section,
+            Tool::SketchLine, Tool::SketchCircle, Tool::SketchArc,
+            Tool::SketchRectangle, Tool::SketchTrim, Tool::SketchOffset,
+            Tool::SketchBevel,
         ];
-        assert_eq!(tools.len(), 12);
+        assert_eq!(tools.len(), 19);
+    }
+
+    #[test]
+    fn test_sketch_line_tool_workflow() {
+        let mut app = EditorApp::new();
+        let sketch_id = app.world.create_sketch("Test");
+        app.world.set_active_sketch(Some(sketch_id));
+
+        app.set_tool(Tool::SketchLine);
+        assert!(app.is_sketch_tool_active());
+
+        // Click start point
+        let result = app.send_tool_input(ToolInput::Click {
+            position: Point2D::new(0.0, 0.0),
+        });
+        assert!(result.is_some());
+
+        // Click end point
+        let result = app.send_tool_input(ToolInput::Click {
+            position: Point2D::new(10.0, 5.0),
+        });
+        // LineTool supports continuous draw
+        assert_eq!(result, Some(ToolModalResult::ContinuousDraw));
+
+        // Verify line was created
+        let sketch = app.world.get_sketch(sketch_id).unwrap();
+        let lines: Vec<_> = sketch.entities.values()
+            .filter(|e| matches!(e, cad_kernel::sketch::SketchEntity::Line { .. }))
+            .collect();
+        assert_eq!(lines.len(), 1);
+    }
+
+    #[test]
+    fn test_create_sketch_command() {
+        let mut app = EditorApp::new();
+        app.execute_command(EditorCommand::CreateSketch {
+            name: "MySketch".into(),
+        });
+        app.update();
+        assert_eq!(app.world.sketches.len(), 1);
+    }
+
+    #[test]
+    fn test_snap_computation() {
+        let mut app = EditorApp::new();
+        let sketch_id = app.world.create_sketch("Snap Test");
+        app.world.set_active_sketch(Some(sketch_id));
+
+        // Add a line entity
+        {
+            let sketch = app.world.get_sketch_mut(sketch_id).unwrap();
+            sketch.add_entity(cad_kernel::sketch::SketchEntity::Line {
+                id: Uuid::new_v4(),
+                start: Point2D::new(0.0, 0.0),
+                end: Point2D::new(10.0, 0.0),
+                is_construction: false,
+            });
+        }
+
+        // Snap near the start endpoint
+        let result = app.compute_snap(Point2D::new(0.1, 0.1), None);
+        assert_eq!(result.snap_type, SnapType::Endpoint);
     }
 }

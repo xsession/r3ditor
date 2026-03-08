@@ -1,9 +1,15 @@
 //! Lightweight ECS (Entity-Component-System) world.
 
+use std::collections::HashMap;
+
 use cad_kernel::brep::BRepBody;
 use cad_kernel::features::FeatureTree;
 use cad_kernel::history::HistoryManager;
+use cad_kernel::sketch::Sketch;
+use cad_kernel::snap::{SnapConfig, PickingColorMap};
+use cad_kernel::snapshot::{ToolSnapshotManager, ClipboardBuffer};
 use cad_kernel::tessellation::TessellationParams;
+use cad_kernel::tools::{ToolStateMachine, ToolInput, ToolModalResult, StatefulTool};
 use renderer::scene::{RenderObject, RenderScene};
 use shared_types::geometry::{Transform3D, TriMesh};
 use shared_types::materials::Appearance;
@@ -58,6 +64,20 @@ pub struct World {
     pub entities: Vec<Entity>,
     pub history: HistoryManager,
     pub tessellation_params: TessellationParams,
+
+    // ── Sketch System ──
+    /// Active sketches indexed by ID
+    pub sketches: HashMap<Uuid, Sketch>,
+    /// Currently active (being edited) sketch
+    pub active_sketch: Option<Uuid>,
+    /// Tool-level snapshot manager (for in-tool undo)
+    pub sketch_snapshots: ToolSnapshotManager,
+    /// Clipboard buffer for copy/paste
+    pub clipboard: Option<ClipboardBuffer>,
+    /// Snap configuration
+    pub snap_config: SnapConfig,
+    /// GPU picking color map
+    pub picking_map: PickingColorMap,
 }
 
 impl World {
@@ -66,6 +86,12 @@ impl World {
             entities: Vec::new(),
             history: HistoryManager::default(),
             tessellation_params: TessellationParams::default(),
+            sketches: HashMap::new(),
+            active_sketch: None,
+            sketch_snapshots: ToolSnapshotManager::default(),
+            clipboard: None,
+            snap_config: SnapConfig::default(),
+            picking_map: PickingColorMap::new(),
         }
     }
 
@@ -95,6 +121,57 @@ impl World {
     pub fn solve_constraints(&mut self) {
         // TODO: Run 2D sketch constraint solver for active sketches
         // TODO: Run 3D assembly constraint solver
+    }
+
+    // ── Sketch Management ──
+
+    /// Create a new sketch and return its ID
+    pub fn create_sketch(&mut self, name: impl Into<String>) -> Uuid {
+        let sketch = Sketch::new(name);
+        let id = sketch.id;
+        self.sketches.insert(id, sketch);
+        id
+    }
+
+    /// Get a reference to a sketch by ID
+    pub fn get_sketch(&self, id: Uuid) -> Option<&Sketch> {
+        self.sketches.get(&id)
+    }
+
+    /// Get a mutable reference to a sketch by ID
+    pub fn get_sketch_mut(&mut self, id: Uuid) -> Option<&mut Sketch> {
+        self.sketches.get_mut(&id)
+    }
+
+    /// Get the currently active sketch (if any)
+    pub fn active_sketch(&self) -> Option<&Sketch> {
+        self.active_sketch.and_then(|id| self.sketches.get(&id))
+    }
+
+    /// Get mutable ref to the currently active sketch
+    pub fn active_sketch_mut(&mut self) -> Option<&mut Sketch> {
+        let id = self.active_sketch?;
+        self.sketches.get_mut(&id)
+    }
+
+    /// Set the active sketch
+    pub fn set_active_sketch(&mut self, id: Option<Uuid>) {
+        self.active_sketch = id;
+    }
+
+    /// Remove a sketch by ID
+    pub fn remove_sketch(&mut self, id: Uuid) -> Option<Sketch> {
+        if self.active_sketch == Some(id) {
+            self.active_sketch = None;
+        }
+        self.sketches.remove(&id)
+    }
+
+    /// List all sketch IDs and names
+    pub fn list_sketches(&self) -> Vec<(Uuid, String)> {
+        self.sketches.iter()
+            .map(|(&id, s)| (id, s.name.clone()))
+            .collect()
     }
 
     /// Rebuild dirty geometry (stage 3 of frame loop)

@@ -49,7 +49,7 @@
         set text(size: 8pt, fill: r3ditor-gray)
         grid(
           columns: (1fr, 1fr),
-          align(left)[© #date — MIT OR Apache-2.0],
+          align(left)[© #date — AGPL-3.0],
           align(right)[Page #counter(page).display("1 / 1", both: true)],
         )
       }

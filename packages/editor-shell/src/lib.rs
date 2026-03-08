@@ -14,4 +14,5 @@ pub mod ecs;
 pub mod input;
 pub mod ui;
 
-pub use app::EditorApp;
+pub use app::{EditorApp, Tool};
+pub use commands::EditorCommand;

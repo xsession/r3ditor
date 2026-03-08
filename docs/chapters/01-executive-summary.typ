@@ -12,29 +12,27 @@ r3ditor is a *full-featured open-source 3D CAD/CAM editor* built from the ground
 
 == Key Capabilities
 
-#grid(
-  columns: (1fr, 1fr),
-  column-gutter: 16pt,
-  row-gutter: 12pt,
-  [
-    === Pure-Rust CAD Kernel
-    Built on the *Truck* B-Rep ecosystem with NURBS surface modeling, boolean operations, parametric feature trees, and full undo/redo history. OpenCASCADE serves as a fallback for complex STEP I/O.
-  ],
-  [
-    === GPU-Accelerated Rendering
-    *wgpu 28* powers an 11-pass render pipeline with PBR Cook-Torrance shading, shadow maps, SSAO, bloom, and FXAA — targeting *60 FPS at 2M triangles* across Vulkan, Metal, DX12, and WebGPU.
-  ],
-  [
-    === Integrated Manufacturing
-    CNC toolpath generation with 6 physics models (Kienzle, Taylor, Loewen-Shaw, Altintas), sheet metal cutting (laser/plasma/waterjet), bending with springback prediction, and nesting optimization.
-  ],
-  [
-    === Cross-Platform Deployment
-    Native desktop via *Tauri 2.2* (Windows/Mac/Linux), browser via *WASM + WebGPU*, and cloud via *Kubernetes* — all sharing the same Rust crate ecosystem. Compile once, deploy everywhere.
-  ],
-)
-
-#v(0.5cm)
+  #grid(
+    columns: (1fr, 1fr),
+    column-gutter: 16pt,
+    row-gutter: 12pt,
+    [
+      === Pure-Rust CAD Kernel
+      Built on the *Truck* B-Rep ecosystem with NURBS surface modeling, 20 parametric feature kinds, boolean operations, topological naming (5-priority cascade), and full transaction-based undo/redo history.
+    ],
+    [
+      === Sketch System (Blender-Inspired)
+      7 entity types, 19 constraint types, 4-stage cascade solver (DogLeg→LM→BFGS→NR), stateful tool framework with continuous draw, snap engine (7 types), GPU picking color map, sketch snapshots, and clipboard with dependency resolution.
+    ],
+    [
+      === Integrated Manufacturing
+      CNC toolpath generation with physics models (Kienzle, Taylor, Loewen-Shaw, Altintas), sheet metal cutting (laser/plasma/waterjet), bending with springback prediction, 8 G-code post-processors, and 2D nesting optimization.
+    ],
+    [
+      === Cross-Platform Deployment
+      Native desktop via *Tauri 2.2* with React 18.3/TypeScript 5.6/Three.js 0.170 frontend, 37 Tauri IPC commands, Zustand 5.0 state management. Cloud mode via Axum API + Docker/Kubernetes.
+    ],
+  )#v(0.5cm)
 
 == Architecture at a Glance
 
@@ -44,29 +42,27 @@ r3ditor is a *full-featured open-source 3D CAD/CAM editor* built from the ground
 
 == Project Metrics
 
-#grid(
-  columns: (1fr, 1fr, 1fr, 1fr, 1fr),
-  column-gutter: 10pt,
-  metric-card("Rust Crates", "15"),
-  metric-card("WGSL Shaders", "5"),
-  metric-card("Materials", "23"),
-  metric-card("Post-Processors", "7"),
-  metric-card("Plugin Types", "7"),
-)
+  #grid(
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr),
+    column-gutter: 10pt,
+    metric-card("Rust Crates", "15"),
+    metric-card("Rust Tests", "295"),
+    metric-card("Frontend Tests", "319"),
+    metric-card("Materials", "23"),
+    metric-card("Post-Processors", "8"),
+  )
 
-#v(0.3cm)
+  #v(0.3cm)
 
-#grid(
-  columns: (1fr, 1fr, 1fr, 1fr, 1fr),
-  column-gutter: 10pt,
-  metric-card("Constraint Types", "15"),
-  metric-card("Feature Types", "11"),
-  metric-card("Render Passes", "11"),
-  metric-card("Visual Modes", "8"),
-  metric-card("View Shortcuts", "12"),
-)
-
-== Design Principles
+  #grid(
+    columns: (1fr, 1fr, 1fr, 1fr, 1fr),
+    column-gutter: 10pt,
+    metric-card("Constraint Types", "19"),
+    metric-card("Feature Types", "20"),
+    metric-card("Tauri Commands", "37"),
+    metric-card("Editor Commands", "22"),
+    metric-card("Tool Types", "21"),
+  )== Design Principles
 
 The architecture is guided by eight core principles:
 

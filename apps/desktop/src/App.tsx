@@ -20,22 +20,47 @@ import { ScriptConsole } from './components/ScriptConsole';
 import { CustomWorkplaneManager } from './components/CustomWorkplanes';
 import { MassProperties } from './components/MassProperties';
 import { ConfigurationManager } from './components/ConfigurationManager';
+import { ViewCube } from './components/ViewCube';
+import { ViewportNavBar } from './components/ViewportNavBar';
 import { useEditorStore } from './store/editorStore';
 import { useKeyboardShortcuts } from './shortcuts/useKeyboardShortcuts';
 
+/**
+ * Fusion 360 Main Application Layout
+ *
+ * ┌─────────────────────────────────────────────────────────┐
+ * │ DocumentHeader (34px) — App bar                         │
+ * ├─────────────────────────────────────────────────────────┤
+ * │ FeatureToolbar (ribbon) — Workspace tabs + tool ribbon  │
+ * ├─────────────────────────────────────────────────────────┤
+ * │ SelectionFilterBar (24px)                               │
+ * ├────────────┬───────────────────────────────┬────────────┤
+ * │ FeatureTree│        Viewport3D             │ Properties │
+ * │ (Browser)  │  ┌─────────────────────┐      │ (Inspector)│
+ * │ 240px      │  │ ViewCube (top-right) │      │ 256px      │
+ * │            │  │ ViewportNavBar (btm) │      │            │
+ * │            │  │ Feature dialog       │      │            │
+ * │            │  └─────────────────────┘      │            │
+ * ├────────────┴───────────────────────────────┴────────────┤
+ * │ SectionControls                                         │
+ * ├─────────────────────────────────────────────────────────┤
+ * │ BottomTabBar (34px) — Timeline                          │
+ * ├─────────────────────────────────────────────────────────┤
+ * │ StatusBar (28px) — Status + units                       │
+ * └─────────────────────────────────────────────────────────┘
+ */
 export default function App() {
   const featureDialogOpen = useEditorStore((s) => s.featureDialog.open);
   const bindingsRef = useKeyboardShortcuts();
 
-  // Right-click context menu handler on the main content area
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     useEditorStore.getState().openMarkingMenu(e.clientX, e.clientY);
   };
 
   return (
-    <div className="flex flex-col w-full h-screen bg-fusion-panel text-fusion-text font-sans">
-      {/* ── Top: Application Bar (Fusion 360) ── */}
+    <div className="flex flex-col w-full h-screen bg-fusion-panel text-fusion-text font-sans overflow-hidden">
+      {/* ── Top: Application Bar ── */}
       <DocumentHeader />
 
       {/* ── Workspace Tabs + Toolbar Ribbon ── */}
@@ -49,9 +74,15 @@ export default function App() {
         {/* Left Panel — Browser */}
         <FeatureTree />
 
-        {/* Center — 3D Canvas */}
-        <div className="flex-1 relative">
+        {/* Center — 3D Canvas with overlays */}
+        <div className="flex-1 relative bg-fusion-canvas">
           <Viewport3D />
+
+          {/* ViewCube — Fusion 360's signature navigation cube (top-right) */}
+          <ViewCube />
+
+          {/* Floating navigation bar (bottom-center of viewport) */}
+          <ViewportNavBar />
 
           {/* Live preview badge */}
           <LivePreviewBadge />
@@ -59,10 +90,10 @@ export default function App() {
           {/* Measure tool readout */}
           <MeasureReadout />
 
-          {/* Sketch constraint overlay (DOF counter, auto-constraints) */}
+          {/* Sketch constraint overlay (DOF counter) */}
           <SketchConstraintOverlay />
 
-          {/* Quick dimension prompt after drawing geometry */}
+          {/* Quick dimension prompt */}
           <QuickDimension />
 
           {/* Feature dialog floating panel */}
@@ -72,7 +103,7 @@ export default function App() {
         {/* Right Panel — Inspector */}
         <PropertiesPanel />
 
-        {/* Floating tool panels (absolutely positioned) */}
+        {/* Floating tool panels */}
         <CustomWorkplaneManager />
         <MassProperties />
         <ConfigurationManager />
@@ -84,7 +115,7 @@ export default function App() {
       {/* ── Bottom: Timeline ── */}
       <BottomTabBar />
 
-      {/* ── Bottom: Navigation Bar ── */}
+      {/* ── Bottom: Status Bar ── */}
       <StatusBar />
 
       {/* ── Overlays ── */}

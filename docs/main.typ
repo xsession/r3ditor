@@ -50,9 +50,9 @@
   columns: (1fr, 1fr, 1fr, 1fr),
   column-gutter: 12pt,
   metric-card("Rust Crates", "15"),
-  metric-card("WGSL Shaders", "5"),
+  metric-card("Rust Tests", "295"),
   metric-card("Materials", "23"),
-  metric-card("Target FPS", "60"),
+  metric-card("Tauri Commands", "37"),
 )
 
 #v(1.5cm)
@@ -61,12 +61,12 @@
   #grid(
     columns: (auto, auto, auto, auto, auto, auto),
     column-gutter: 8pt,
-    tech-badge("Rust 2021", color: rgb("#DEA584")),
-    tech-badge("wgpu 28", color: r3ditor-indigo),
-    tech-badge("Truck B-Rep", color: r3ditor-sky),
+    tech-badge("Rust 1.93", color: rgb("#DEA584")),
+    tech-badge("Truck 0.6", color: r3ditor-sky),
     tech-badge("Tauri 2.2", color: r3ditor-blue),
-    tech-badge("React 18", color: r3ditor-sky),
-    tech-badge("wasmtime 28", color: r3ditor-purple),
+    tech-badge("React 18.3", color: r3ditor-sky),
+    tech-badge("Three.js 0.170", color: r3ditor-indigo),
+    tech-badge("Zustand 5.0", color: r3ditor-purple),
   )
 ]
 
@@ -74,8 +74,8 @@
 
 #align(center)[
   #text(size: 9pt, fill: r3ditor-gray)[
-    License: MIT OR Apache-2.0 \
-    Generated: March 2026 \
+    License: AGPL-3.0 \\
+    Generated: June 2025 \\
     Classification: Public
   ]
 ]

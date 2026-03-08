@@ -20,12 +20,12 @@ export function PropertiesPanel() {
   const selected = entities.filter((e) => selectedIds.includes(e.id));
 
   return (
-    <div className="w-64 bg-fusion-panel border-l border-fusion-border flex flex-col">
+    <div className="w-[256px] bg-fusion-panel border-l border-fusion-border flex flex-col shrink-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-fusion-border bg-fusion-toolbar">
-        <span className="text-xs font-medium text-fusion-text uppercase tracking-wide">Inspector</span>
+      <div className="flex items-center justify-between px-3 h-[30px] border-b border-fusion-border bg-fusion-panel-header shrink-0">
+        <span className="text-[10px] font-bold text-fusion-text-secondary uppercase tracking-[0.08em]">Inspector</span>
         <button
-          className="p-0.5 rounded hover:bg-fusion-surface text-fusion-text-secondary hover:text-fusion-text"
+          className="p-0.5 rounded-fusion hover:bg-fusion-hover text-fusion-text-disabled hover:text-fusion-text-secondary transition-colors"
           onClick={toggleInspector}
         >
           <X size={12} />
@@ -33,19 +33,22 @@ export function PropertiesPanel() {
       </div>
 
       {/* Tab bar */}
-      <div className="flex items-center border-b border-fusion-border">
+      <div className="flex items-center border-b border-fusion-border shrink-0">
         {tabList.map((tab) => (
           <button
             key={tab}
             className={clsx(
-              'flex-1 px-1 py-1.5 text-[10px] capitalize transition-colors',
+              'flex-1 px-1 h-[28px] text-[10px] capitalize transition-colors relative',
               inspectorTab === tab
-                ? 'text-fusion-blue border-b-2 border-fusion-blue bg-fusion-surface'
-                : 'text-fusion-text-disabled hover:text-fusion-text-secondary hover:bg-fusion-surface',
+                ? 'text-fusion-blue bg-fusion-surface'
+                : 'text-fusion-text-disabled hover:text-fusion-text-secondary hover:bg-fusion-hover',
             )}
             onClick={() => setInspectorTab(tab)}
           >
             {tab}
+            {inspectorTab === tab && (
+              <div className="absolute bottom-0 left-1 right-1 h-[2px] bg-fusion-blue rounded-t-full" />
+            )}
           </button>
         ))}
       </div>

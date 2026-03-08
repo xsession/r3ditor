@@ -146,7 +146,7 @@ helm install r3ditor r3ditor/r3ditor-stack \
 #table(
   columns: (auto, auto, 1fr),
   table.header([*Component*], [*Scaling Axis*], [*Strategy*]),
-  [API Gateway], [Horizontal], [Stateless; add replicas behind load balancer. Target: <100ms p99.],
+  [API Gateway], [Horizontal], [Stateless; add replicas behind load balancer. Target: \<100ms p99.],
   [Worker CAD], [Horizontal], [CPU-bound; scale by pending queue depth. Each replica handles 1 job.],
   [Worker Analysis], [Horizontal], [Memory-bound (DFM models); scale by memory pressure.],
   [Worker CAM], [Horizontal], [CPU-bound (nesting is O(n²)); scale by job backlog.],

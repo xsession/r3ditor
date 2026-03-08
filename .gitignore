@@ -32,6 +32,11 @@ Thumbs.db
 *.wasm
 *.d.ts
 
+# Logs
+logs/
+*.log
+build_log*.txt
+
 # Generated output (callicat models, STL exports)
 apps/desktop/output/
 apps/desktop/generated_test_models/

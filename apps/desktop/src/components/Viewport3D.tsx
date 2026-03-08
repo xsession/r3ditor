@@ -2,19 +2,19 @@ import { Canvas, useThree, useFrame, ThreeEvent } from '@react-three/fiber';
 import {
   OrbitControls,
   Grid,
-  GizmoHelper,
-  GizmoViewport,
   TransformControls,
   Line,
   Html,
 } from '@react-three/drei';
-import { useEditorStore, type Tool, type SketchPlaneInfo } from '../store/editorStore';
+import { useEditorStore, type Tool, type SketchPlaneInfo, type ExtrudedBody } from '../store/editorStore';
 import { ViewCommandHandler } from './ViewCommandHandler';
 import { SectionPlane } from './SectionAnalysis';
 import { SketchConstraintGlyphs } from './SketchConstraintGlyphs';
-import { SketchDimensionAnnotations } from './SketchDimensionAnnotations';
+import { EditableDimensionAnnotations } from './EditableDimensionAnnotations';
 import { SnapIndicators } from './SnapIndicators';
 import { SubElementPicker } from './SubElementPicker';
+import { FinishedSketchOverlay } from './FinishedSketchOverlay';
+import { ExtrudedBodyRenderer } from './ExtrudedBodyRenderer';
 import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import * as THREE from 'three';
 
@@ -284,14 +284,66 @@ function SelectablePlane({
   );
 }
 
+/**
+ * FaceSelectHelper: renders a single extruded-body face as a transparent
+ * clickable mesh during the plane-selection phase. On hover it glows, on
+ * click it calls beginSketchOnFace so the user can sketch directly on that
+ * face — FreeCAD-style "sketch on face".
+ */
+function FaceSelectHelper({ body, faceIndex }: { body: ExtrudedBody; faceIndex: number }) {
+  const face = body.faces[faceIndex];
+  const [hovered, setHovered] = useState(false);
+
+  // Build a BufferGeometry for just this face's triangles
+  const geometry = useMemo(() => {
+    const geo = new THREE.BufferGeometry();
+    const verts: number[] = [];
+    for (let t = 0; t < face.triangleCount; t++) {
+      const idx = (face.startTriangle + t) * 3;
+      for (let v = 0; v < 3; v++) {
+        const vi = body.meshIndices[idx + v] * 3;
+        verts.push(body.meshVertices[vi], body.meshVertices[vi + 1], body.meshVertices[vi + 2]);
+      }
+    }
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    geo.computeVertexNormals();
+    return geo;
+  }, [body, face]);
+
+  const pos = body.transform.position;
+
+  return (
+    <mesh
+      geometry={geometry}
+      position={[pos[0], pos[1], pos[2]]}
+      onPointerOver={(e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = 'pointer'; }}
+      onPointerOut={() => { setHovered(false); document.body.style.cursor = 'default'; }}
+      onClick={(e) => {
+        e.stopPropagation();
+        document.body.style.cursor = 'default';
+        useEditorStore.getState().beginSketchOnFace(body.id, faceIndex);
+      }}
+    >
+      <meshBasicMaterial
+        color={hovered ? '#fbbf24' : '#f59e0b'}
+        transparent
+        opacity={hovered ? 0.45 : 0.15}
+        side={THREE.DoubleSide}
+        depthWrite={false}
+      />
+    </mesh>
+  );
+}
+
 function PlaneSelectionOverlay() {
   const xyInfo: SketchPlaneInfo = { type: 'XY', origin: [0, 0, 0], normal: [0, 0, 1], uAxis: [1, 0, 0], vAxis: [0, 1, 0] };
   const xzInfo: SketchPlaneInfo = { type: 'XZ', origin: [0, 0, 0], normal: [0, 1, 0], uAxis: [1, 0, 0], vAxis: [0, 0, 1] };
   const yzInfo: SketchPlaneInfo = { type: 'YZ', origin: [0, 0, 0], normal: [1, 0, 0], uAxis: [0, 1, 0], vAxis: [0, 0, 1] };
+  const extrudedBodies = useEditorStore((s) => s.extrudedBodies);
 
   return (
     <>
-      {/* XY plane – blue */}
+      {/* Standard reference planes */}
       <SelectablePlane
         color="#60a5fa"
         hoverColor="#93c5fd"
@@ -300,7 +352,6 @@ function PlaneSelectionOverlay() {
         label="XY Plane"
         planeInfo={xyInfo}
       />
-      {/* XZ plane – green */}
       <SelectablePlane
         color="#4ade80"
         hoverColor="#86efac"
@@ -309,7 +360,6 @@ function PlaneSelectionOverlay() {
         label="XZ Plane"
         planeInfo={xzInfo}
       />
-      {/* YZ plane – red */}
       <SelectablePlane
         color="#f87171"
         hoverColor="#fca5a5"
@@ -318,6 +368,17 @@ function PlaneSelectionOverlay() {
         label="YZ Plane"
         planeInfo={yzInfo}
       />
+
+      {/* Clickable faces on extruded bodies — shown during plane selection */}
+      {extrudedBodies.map((body) =>
+        body.faces.map((_face, faceIdx) => (
+          <FaceSelectHelper
+            key={`facesel-${body.id}-${faceIdx}`}
+            body={body}
+            faceIndex={faceIdx}
+          />
+        ))
+      )}
     </>
   );
 }
@@ -513,9 +574,37 @@ function SketchDrawingOverlay() {
           case 'line': {
             const p1Id = ptId();
             const p2Id = ptId();
+            const lineSegId = segId();
             store().addSketchPoint({ id: p1Id, x: sx, y: sy, isConstruction: false });
             store().addSketchPoint({ id: p2Id, x: ex, y: ey, isConstruction: false });
-            store().addSketchSegment({ id: segId(), type: 'line', points: [p1Id, p2Id], isConstruction: false });
+            store().addSketchSegment({ id: lineSegId, type: 'line', points: [p1Id, p2Id], isConstruction: false });
+
+            // Auto-detect H/V constraint for the line (FreeCAD Sketcher style)
+            const angleDeg = Math.abs(Math.atan2(ey - sy, ex - sx)) * (180 / Math.PI);
+            const HV_THRESHOLD = 5; // degrees
+            const acIdLine = () => `ac_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+            if (angleDeg < HV_THRESHOLD || angleDeg > (180 - HV_THRESHOLD)) {
+              // Nearly horizontal
+              store().addSketchConstraint({ id: acIdLine(), type: 'horizontal', entityIds: [lineSegId], satisfied: true });
+            } else if (Math.abs(angleDeg - 90) < HV_THRESHOLD) {
+              // Nearly vertical
+              store().addSketchConstraint({ id: acIdLine(), type: 'vertical', entityIds: [lineSegId], satisfied: true });
+            }
+
+            // Auto-add a length dimension
+            const length = Math.sqrt(dxAbs * dxAbs + dyAbs * dyAbs);
+            if (length > 1) {
+              const dimIdLine = `dim_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+              store().addSketchDimension({
+                id: dimIdLine,
+                type: 'distance',
+                entityIds: [p1Id, p2Id],
+                value: Math.round(length * 100) / 100,
+                driving: true,
+                segmentId: lineSegId,
+                role: 'length',
+              });
+            }
             break;
           }
           case 'rectangle':
@@ -529,10 +618,51 @@ function SketchDrawingOverlay() {
             store().addSketchPoint({ id: idTR, x: right, y: top_, isConstruction: false });
             store().addSketchPoint({ id: idBR, x: right, y: bottom, isConstruction: false });
             store().addSketchPoint({ id: idBL, x: left, y: bottom, isConstruction: false });
-            store().addSketchSegment({ id: segId(), type: 'line', points: [idTL, idTR], isConstruction: false });
-            store().addSketchSegment({ id: segId(), type: 'line', points: [idTR, idBR], isConstruction: false });
-            store().addSketchSegment({ id: segId(), type: 'line', points: [idBR, idBL], isConstruction: false });
-            store().addSketchSegment({ id: segId(), type: 'line', points: [idBL, idTL], isConstruction: false });
+            const topSegId = segId();
+            const rightSegId = segId();
+            const bottomSegId = segId();
+            const leftSegId = segId();
+            store().addSketchSegment({ id: topSegId, type: 'line', points: [idTL, idTR], isConstruction: false });
+            store().addSketchSegment({ id: rightSegId, type: 'line', points: [idTR, idBR], isConstruction: false });
+            store().addSketchSegment({ id: bottomSegId, type: 'line', points: [idBR, idBL], isConstruction: false });
+            store().addSketchSegment({ id: leftSegId, type: 'line', points: [idBL, idTL], isConstruction: false });
+
+            // Auto-add constraints for rectangle (FreeCAD Sketcher style)
+            const acId = () => `ac_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+            // Horizontal constraints on top and bottom edges
+            store().addSketchConstraint({ id: acId(), type: 'horizontal', entityIds: [topSegId], satisfied: true });
+            store().addSketchConstraint({ id: acId(), type: 'horizontal', entityIds: [bottomSegId], satisfied: true });
+            // Vertical constraints on left and right edges
+            store().addSketchConstraint({ id: acId(), type: 'vertical', entityIds: [rightSegId], satisfied: true });
+            store().addSketchConstraint({ id: acId(), type: 'vertical', entityIds: [leftSegId], satisfied: true });
+            // Coincident constraints at all 4 corners
+            store().addSketchConstraint({ id: acId(), type: 'coincident', entityIds: [idTR, idTR], satisfied: true });
+            store().addSketchConstraint({ id: acId(), type: 'coincident', entityIds: [idBR, idBR], satisfied: true });
+            store().addSketchConstraint({ id: acId(), type: 'coincident', entityIds: [idBL, idBL], satisfied: true });
+            store().addSketchConstraint({ id: acId(), type: 'coincident', entityIds: [idTL, idTL], satisfied: true });
+
+            // Auto-add driving dimensions (editable width × height)
+            const width = right - left;
+            const height = top_ - bottom;
+            const dimId = () => `dim_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+            store().addSketchDimension({
+              id: dimId(),
+              type: 'distance',
+              entityIds: [idTL, idTR],
+              value: width,
+              driving: true,
+              segmentId: topSegId,
+              role: 'width',
+            });
+            store().addSketchDimension({
+              id: dimId(),
+              type: 'distance',
+              entityIds: [idTR, idBR],
+              value: height,
+              driving: true,
+              segmentId: rightSegId,
+              role: 'height',
+            });
             break;
           }
           case 'circle':
@@ -540,9 +670,24 @@ function SketchDrawingOverlay() {
             const cId = ptId();
             const eId = ptId();
             const r = Math.sqrt(dxAbs * dxAbs + dyAbs * dyAbs);
+            const circleSegId = segId();
             store().addSketchPoint({ id: cId, x: sx, y: sy, isConstruction: false });
             store().addSketchPoint({ id: eId, x: sx + r, y: sy, isConstruction: false });
-            store().addSketchSegment({ id: segId(), type: 'circle', points: [cId, eId], isConstruction: false });
+            store().addSketchSegment({ id: circleSegId, type: 'circle', points: [cId, eId], isConstruction: false });
+
+            // Auto-add radius dimension (FreeCAD style)
+            if (r > 0.5) {
+              const dimIdCircle = `dim_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+              store().addSketchDimension({
+                id: dimIdCircle,
+                type: 'radius',
+                entityIds: [cId, eId],
+                value: Math.round(r * 100) / 100,
+                driving: true,
+                segmentId: circleSegId,
+                role: 'radius',
+              });
+            }
             break;
           }
           case 'arc3point': {
@@ -955,20 +1100,16 @@ function ViewportCanvas() {
         />
       )}
 
-      {/* Axis gizmo */}
-      {showAxes && (
-        <GizmoHelper alignment="top-right" margin={[80, 80]}>
-          <GizmoViewport
-            axisColors={['#f87171', '#4ade80', '#60a5fa']}
-            labelColor="white"
-          />
-        </GizmoHelper>
-      )}
+      {/* ViewCube replaces the old GizmoHelper — see ViewCube.tsx */}
 
       {/* Reference axes */}
-      <Line points={[[-100, 0, 0], [100, 0, 0]]} color="#f87171" lineWidth={1} transparent opacity={0.3} />
-      <Line points={[[0, 0, -100], [0, 0, 100]]} color="#60a5fa" lineWidth={1} transparent opacity={0.3} />
-      <Line points={[[0, -100, 0], [0, 100, 0]]} color="#4ade80" lineWidth={1} transparent opacity={0.15} />
+      {showAxes && (
+        <>
+          <Line points={[[-100, 0, 0], [100, 0, 0]]} color="#f87171" lineWidth={1} transparent opacity={0.3} />
+          <Line points={[[0, 0, -100], [0, 0, 100]]} color="#60a5fa" lineWidth={1} transparent opacity={0.3} />
+          <Line points={[[0, -100, 0], [0, 100, 0]]} color="#4ade80" lineWidth={1} transparent opacity={0.15} />
+        </>
+      )}
 
       {/* Reference planes */}
       <ReferencePlanes />
@@ -1000,11 +1141,17 @@ function ViewportCanvas() {
       {/* Sketch constraint glyphs (visual markers on constrained geometry) */}
       {sketchPhase === 'drawing' && <SketchConstraintGlyphs />}
 
-      {/* Sketch dimension annotations (value labels with leader lines) */}
-      {sketchPhase === 'drawing' && <SketchDimensionAnnotations />}
+      {/* Editable sketch dimension annotations (click to edit values) */}
+      {sketchPhase === 'drawing' && <EditableDimensionAnnotations />}
 
       {/* Snap indicators during sketch drawing */}
       {sketchPhase === 'drawing' && <SnapIndicators />}
+
+      {/* Finished sketch wireframes (visible after "Finish Sketch") */}
+      <FinishedSketchOverlay />
+
+      {/* Extruded 3D bodies */}
+      <ExtrudedBodyRenderer />
 
       {/* Sub-element picking (face/edge/vertex) */}
       <SubElementPicker />

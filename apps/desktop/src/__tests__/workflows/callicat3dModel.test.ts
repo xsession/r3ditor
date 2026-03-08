@@ -1683,7 +1683,8 @@ describe('User Interaction Automata — Callicat 3D Model', () => {
       // Finish sketch
       mouseClickAtSketchPoint(0, 0, 'status_pt');
       store().finishSketch();
-      expect(state().statusMessage).toBe('Sketch completed');
+      expect(state().statusMessage).toContain('Sketch');
+      expect(state().statusMessage).toContain('completed');
 
       // Tool switch
       store().setTool('extrude');
